@@ -1,0 +1,2615 @@
+
+
+
+
+
+
+
+
+<!DOCTYPE html
+PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd"> 
+<html>
+<head>
+<title>ISMARA  results: RORC</title> 
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"> 
+<link rel="stylesheet" type="text/css" href="../css/mara_results.css" />
+<link rel="stylesheet" href="../css/custom-theme/jquery-ui.custom.css" type="text/css" />
+<link rel="stylesheet" href="../css/dataTables.css" type="text/css" />
+<link rel="stylesheet" href="../css/mara_results.css" type="text/css" />
+<link rel="stylesheet" href="../css/jquery.tooltip.css" type="text/css" />
+<script type="text/javascript" src="../js/jquery.min.js"></script>
+<script type="text/javascript" src="../js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="../js/jquery.tooltip.min.js"></script>
+<script type="text/javascript" src="../js/search_gene_submit.js?1"></script>
+<script type="text/javascript" charset="utf-8">
+  jQuery.fn.dataTableExt.oSort['scientific-asc']  = function(a,b) {
+    var x = parseFloat(a);
+    var y = parseFloat(b);
+    return ((x < y) ? -1 : ((x > y) ?  1 : 0));
+  };
+  jQuery.fn.dataTableExt.oSort['scientific-desc']  = function(a,b) {
+    var x = parseFloat(a);
+    var y = parseFloat(b);
+    console.log(a + " " + x + " " + b );
+    return ((x < y) ? 1 : ((x > y) ?  -1 : 0));
+  };
+  $(document).ready(function() {
+  $('#targets_table').dataTable( {
+    "sDom": 'flpirt',
+    "aLengthMenu": [[20, 50, 100, -1], [20, 50, 100, "All"]],
+    "iDisplayLength": 20,
+    "aaSorting": [ [1,'desc']]
+  });
+  $('.goa_table').dataTable( {
+    "sDom": 'flpirt',
+    "iDisplayLength": 20,
+    "aoColumns": [
+      {"sType": "numeric"},
+      {"sType": "numeric"},
+      null,
+      null
+    ],
+    "aaSorting": [ [0,'desc']]
+  });
+          
+$(".new_goa_table").dataTable( {
+    "sDom": 'flpirt',
+    "iDisplayLength": 20,
+    "aoColumns": [
+      {"sType": "numeric"},
+      {"sType": "numeric"},
+      null,
+      null
+    ],
+    "aaSorting": [ [1,'desc']]
+  });
+$(".ae_tip").tooltip({showURL: false,
+                              bodyHandler: function() {
+                                return $("<img/>").attr("src", $(this).attr("data-image"));}
+                             });
+$(".tip").tooltip({showURL: false, track: true});
+} );
+</script>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-8114130-4', 'auto');
+  ga('send', 'pageview');
+
+</script>
+</head>
+<body>
+<div id="navbar"> 
+<div class="center" title="go to ISMARA website" id="ismara_link"><h3><a href="http://ismara.unibas.ch">ISMARA</a><h3></div>
+  <div class="center"><h3>Project<h3></div>
+  <div class="project_name">holding</div>
+<div class="center"><h3>Navigation</h3></div> 
+<ul> 
+  <li><a href="../index.html#wm_index">All motifs sorted by activity significance</a></li> 
+  <li><a href="../index.html#sample_index">All samples sorted alphabetically</a></li> 
+  <li><a href="mean_activity.html">Mean activities</a></li> 
+</ul> 
+<div id="search_gene" style="display:none;">
+    <input type="text" name="term" class="tip" title="Search gene or transcript of of interest and see how each regulator contribute to the predicted expression.">
+    <input type="hidden" name="dir" value="data_giSmjg">
+    <button class="search_gene tip" id="search_gene_button" title="Search gene or transcript of of interest and see how each regulator contribute to the predicted expression.">Search gene</button>
+</div>
+
+
+<div id="intra_navbar"> 
+  <ul> 
+    <li><a href="#act_graph">Activity graph</a></li> 
+    <li><a href="#zval_graph">Z-values graph</a></li> 
+    <li><a href="#targets">Top targets</a></li> 
+    <li><a href="#goa">GO analysis</a></li> 
+    <li><a href="#top">Back to top</a></li> 
+  </ul> 
+</div> 
+
+<div class="center"><h3>Downloads</h3></div> 
+<ul> 
+  <li><a href="../activity_table">Activities table</a></li> 
+  <li><a href="../delta_table">Activity deltas table</a></li> 
+  <li><a href="../targets.tar.gz">Regulatory interactions</a></li> 
+  <li><a href="../active_matrices">Motifs sorted by significance (text)</li>
+  <li><a href="../../ismara_report.tar.gz">Download the whole report</li>
+</ul> 
+</div>
+
+
+<div id="content">
+<h2><a name="top">Motif ID: RORC</a></h2>
+<h2>Z-value: 0.191</h2>
+
+  <a href="../logos/RORC.png">
+  <img src="../logos/RORC.png" alt="logo of RORC" class="fullsize_logo"> 
+  </a>
+  <br>
+
+    <div class="associated_tf"> 
+    <h3>Transcription factors associated with RORC:</h3>
+
+  <table>
+    <tr><th>Gene Symbol</th><th>Entrez ID</th><th>Gene Name</th></tr>
+    
+
+    <tr>
+     <td>
+        <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000143365.12">
+          RORC
+        </a>
+      </td>
+      <td>
+        <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000143365.12"> 
+          ENSG00000143365.12
+        </a>
+      </td>
+      <td>
+        <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000143365.12">
+        RORC
+        </a>
+      </td>
+    </tr>
+    
+  </table>
+  </div>
+
+<br>
+
+<br>
+
+<div class="big_img_box"> 
+  <a name="act_graph"> 
+  <br> 
+  <span class="header">Activity profile for motif RORC.</span> 
+  <br> 
+  <br> 
+  </a>
+  <a href="../profiles/RORC/profile.png"> 
+  <img class="act_img" src="../profiles/RORC/profile.png" 
+  alt="activity profile for motif RORC"> 
+  </a> 
+</div> 
+<br>
+
+<div class="big_img_box"> 
+<a name="zval_graph"> 
+<br> 
+<span class="header">Sorted Z-values histogram for motif RORC</span> 
+<br> 
+<br> 
+</a> 
+<a href="../profiles/RORC/zvals.png"> 
+<img class="zval_img" src="../profiles/RORC/zvals.png" alt="Sorted Z-values for motif RORC"> 
+</a> 
+</div> 
+<br> 
+<br>
+
+<div class="big_img_box"> 
+  <br> 
+  <span class="header">Network of associatons between targets according to the
+  <a href="http://string-db.org/">STRING database.</a></span> 
+  <br> 
+  <br> 
+
+<a href="http://string-db.org/newstring_cgi/show_network_section.pl?&amp;multi_input=1&amp;limit=0&amp;targetmode=proteins&amp;caller_identity=MARA&amp;species=9606&amp;network_flavor=evidence&amp;identifiers=9606.ENSP00000363804%0D9606.ENSP00000355537%0D9606.ENSP00000409000%0D9606.ENSP00000370883%0D9606.ENSP00000420405%0D9606.ENSP00000472443%0D9606.ENSP00000318916%0D9606.ENSP00000314992%0D9606.ENSP00000262713%0D9606.ENSP00000450337%0D9606.ENSP00000357461%0D9606.ENSP00000289707%0D9606.ENSP00000455434%0D9606.ENSP00000425556%0D9606.ENSP00000275072%0D9606.ENSP00000421725%0D9606.ENSP00000319673%0D9606.ENSP00000296257%0D9606.ENSP00000361811%0D9606.ENSP00000164139%0D9606.ENSP00000435412%0D9606.ENSP00000372093%0D9606.ENSP00000270176%0D9606.ENSP00000005284%0D9606.ENSP00000382274%0D9606.ENSP00000296135%0D9606.ENSP00000222122%0D9606.ENSP00000374357%0D9606.ENSP00000324074%0D9606.ENSP00000253408%0D9606.ENSP00000262032%0D9606.ENSP00000259008%0D9606.ENSP00000264169%0D9606.ENSP00000346762%0D9606.ENSP00000433646%0D9606.ENSP00000160262%0D9606.ENSP00000369666%0D9606.ENSP00000333639%0D9606.ENSP00000331741%0D9606.ENSP00000340937%0D9606.ENSP00000434385%0D9606.ENSP00000354878%0D9606.ENSP00000222005%0D9606.ENSP00000285243%0D9606.ENSP00000367869%0D9606.ENSP00000358099%0D9606.ENSP00000365441%0D9606.ENSP00000467691%0D9606.ENSP00000376076%0D9606.ENSP00000420914%0D9606.ENSP00000209875%0D9606.ENSP00000274024%0D9606.ENSP00000408342%0D9606.ENSP00000300399%0D9606.ENSP00000265417%0D9606.ENSP00000346294%0D9606.ENSP00000288025%0D9606.ENSP00000354583%0D9606.ENSP00000297293%0D9606.ENSP00000287667%0D9606.ENSP00000299163%0D9606.ENSP00000366208%0D9606.ENSP00000297767%0D9606.ENSP00000361125%0D9606.ENSP00000322887%0D9606.ENSP00000350718%0D9606.ENSP00000386049%0D9606.ENSP00000241274%0D9606.ENSP00000356468%0D9606.ENSP00000354850%0D9606.ENSP00000302274%0D9606.ENSP00000290949%0D9606.ENSP00000381293%0D9606.ENSP00000383145%0D9606.ENSP00000373700%0D9606.ENSP00000266095%0D9606.ENSP00000379065%0D9606.ENSP00000355968%0D9606.ENSP00000204615%0D9606.ENSP00000450554%0D9606.ENSP00000331545%0D9606.ENSP00000350876%0D9606.ENSP00000225844%0D9606.ENSP00000450856%0D9606.ENSP00000261592%0D9606.ENSP00000430271%0D9606.ENSP00000335082%0D9606.ENSP00000451656"><img style="width: 90%;" src="http://string-db.org/api/image/network?network_flavor=evidence&amp;limit=0&amp;species=9606&amp;caller_identity=MARA&amp;identifiers=9606.ENSP00000363804%0D9606.ENSP00000355537%0D9606.ENSP00000409000%0D9606.ENSP00000370883%0D9606.ENSP00000420405%0D9606.ENSP00000472443%0D9606.ENSP00000318916%0D9606.ENSP00000314992%0D9606.ENSP00000262713%0D9606.ENSP00000450337%0D9606.ENSP00000357461%0D9606.ENSP00000289707%0D9606.ENSP00000455434%0D9606.ENSP00000425556%0D9606.ENSP00000275072%0D9606.ENSP00000421725%0D9606.ENSP00000319673%0D9606.ENSP00000296257%0D9606.ENSP00000361811%0D9606.ENSP00000164139%0D9606.ENSP00000435412%0D9606.ENSP00000372093%0D9606.ENSP00000270176%0D9606.ENSP00000005284%0D9606.ENSP00000382274%0D9606.ENSP00000296135%0D9606.ENSP00000222122%0D9606.ENSP00000374357%0D9606.ENSP00000324074%0D9606.ENSP00000253408%0D9606.ENSP00000262032%0D9606.ENSP00000259008%0D9606.ENSP00000264169%0D9606.ENSP00000346762%0D9606.ENSP00000433646%0D9606.ENSP00000160262%0D9606.ENSP00000369666%0D9606.ENSP00000333639%0D9606.ENSP00000331741%0D9606.ENSP00000340937%0D9606.ENSP00000434385%0D9606.ENSP00000354878%0D9606.ENSP00000222005%0D9606.ENSP00000285243%0D9606.ENSP00000367869%0D9606.ENSP00000358099%0D9606.ENSP00000365441%0D9606.ENSP00000467691%0D9606.ENSP00000376076%0D9606.ENSP00000420914%0D9606.ENSP00000209875%0D9606.ENSP00000274024%0D9606.ENSP00000408342%0D9606.ENSP00000300399%0D9606.ENSP00000265417%0D9606.ENSP00000346294%0D9606.ENSP00000288025%0D9606.ENSP00000354583%0D9606.ENSP00000297293%0D9606.ENSP00000287667%0D9606.ENSP00000299163%0D9606.ENSP00000366208%0D9606.ENSP00000297767%0D9606.ENSP00000361125%0D9606.ENSP00000322887%0D9606.ENSP00000350718%0D9606.ENSP00000386049%0D9606.ENSP00000241274%0D9606.ENSP00000356468%0D9606.ENSP00000354850%0D9606.ENSP00000302274%0D9606.ENSP00000290949%0D9606.ENSP00000381293%0D9606.ENSP00000383145%0D9606.ENSP00000373700%0D9606.ENSP00000266095%0D9606.ENSP00000379065%0D9606.ENSP00000355968%0D9606.ENSP00000204615%0D9606.ENSP00000450554%0D9606.ENSP00000331545%0D9606.ENSP00000350876%0D9606.ENSP00000225844%0D9606.ENSP00000450856%0D9606.ENSP00000261592%0D9606.ENSP00000430271%0D9606.ENSP00000335082%0D9606.ENSP00000451656"></a>
+</div>
+<br>
+ 
+        <div class="big_img_box"> 
+        <br> 
+        <span class="header">First level regulatory network of RORC</a></span> 
+        <br> 
+        <br>  
+<object data="../networks/RORC.svg"
+type="image/svg+xml"
+width="571px"
+height="416px">
+<img src="../networks/RORC.png" alt="PNG image of the network"/>
+<h3>In order to view interactive SVG image please either update your browser to latest version or install SVG plugin.</h3>
+</object>
+<br />
+
+<a href="../networks/RORC.svg">View svg image</a>
+<br/>
+<a href="../networks/RORC.png">View png image</a>
+        </div>
+        <br>
+
+
+  <hr><h3><a name="targets">Top targets:</a></h3> 
+<br> 
+<table id="targets_table">
+  <thead>
+  <tr>
+    <th>Promoter</th>
+    <th>Score</th>
+    <th>Refseq</th>
+    <th>Gene Symbol</th>
+    <th>Gene Name</th>
+  </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr17%3A59940205..59941328&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr17_-_59940705</a>
+      </td>
+      <td>
+        0.130
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000577913.1">ENST00000577913.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000136492">
+               BRIP1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000136492">
+               BRCA1 interacting protein C-terminal helicase 1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr20%3A37209320..37210449&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr20_+_37209820</a>
+      </td>
+      <td>
+        0.095
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000537425.1">ENST00000537425.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000373348.3">ENST00000373348.3</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000416116.1">ENST00000416116.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000182035">
+               ADIG
+               </a><br>
+           <br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000182035">
+               adipogenin
+               </a><br>
+           <br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr11%3A64526925..64527961&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr11_-_64527425</a>
+      </td>
+      <td>
+        0.090
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000377432.3">ENST00000377432.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000068976">
+               PYGM
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000068976">
+               phosphorylase, glycogen, muscle
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr8%3A116673394..116674413&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr8_-_116673894</a>
+      </td>
+      <td>
+        0.071
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000395713.2">ENST00000395713.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000104447">
+               TRPS1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000104447">
+               trichorhinophalangeal syndrome I
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A157069090..157070107&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_-_157069590</a>
+      </td>
+      <td>
+        0.068
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000454449.2">ENST00000454449.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000253831">
+               ETV3L
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000253831">
+               ets variant 3-like
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr14%3A104408145..104409145&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr14_-_104408645</a>
+      </td>
+      <td>
+        0.061
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000557640.1">ENST00000557640.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000227729">
+               RD3L
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000227729">
+               retinal degeneration 3-like
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr11%3A69866659..69867675&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr11_-_69867159</a>
+      </td>
+      <td>
+        0.059
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000528507.1">ENST00000528507.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000254605">
+               RP11-626H12.2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000254605">
+               RP11-626H12.2
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr3%3A184095423..184096453&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr3_-_184095923</a>
+      </td>
+      <td>
+        0.054
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000445696.2">ENST00000445696.2</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000204615.7">ENST00000204615.7</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000090534">
+               THPO
+               </a><br>
+           <br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000090534">
+               thrombopoietin
+               </a><br>
+           <br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr19%3A1268824..1269850&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr19_+_1269324</a>
+      </td>
+      <td>
+        0.053
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000589710.1">ENST00000589710.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000588230.1">ENST00000588230.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000413636.2">ENST00000413636.2</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000586472.1">ENST00000586472.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000589686.1">ENST00000589686.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000444172.2">ENST00000444172.2</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000587323.1">ENST00000587323.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000320936.5">ENST00000320936.5</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000587896.1">ENST00000587896.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000589235.1">ENST00000589235.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000591659.1">ENST00000591659.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000099622">
+               CIRBP
+               </a><br>
+           <br><br><br><br><br><br><br><br><br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000099622">
+               cold inducible RNA binding protein
+               </a><br>
+           <br><br><br><br><br><br><br><br><br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr16%3A69385181..69386212&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr16_-_69385681</a>
+      </td>
+      <td>
+        0.053
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000288025.3">ENST00000288025.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000157315">
+               TMED6
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000157315">
+               transmembrane emp24 protein transport domain containing 6
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A236849254..236850308&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_+_236849754</a>
+      </td>
+      <td>
+        0.053
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000542672.1">ENST00000542672.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000366578.4">ENST00000366578.4</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000077522">
+               ACTN2
+               </a><br>
+           <br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000077522">
+               actinin, alpha 2
+               </a><br>
+           <br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A205196804..205197897&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_+_205197304</a>
+      </td>
+      <td>
+        0.047
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000358024.3">ENST00000358024.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000133069">
+               TMCC2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000133069">
+               transmembrane and coiled-coil domain family 2
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr14%3A23451345..23452356&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr14_-_23451845</a>
+      </td>
+      <td>
+        0.046
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000262713.2">ENST00000262713.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000129474">
+               AJUBA
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000129474">
+               ajuba LIM protein
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr9%3A110251336..110252427&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr9_-_110251836</a>
+      </td>
+      <td>
+        0.043
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000374672.4">ENST00000374672.4</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000136826">
+               KLF4
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000136826">
+               Kruppel-like factor 4 (gut)
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr19%3A10449787..10450824&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr19_-_10450287</a>
+      </td>
+      <td>
+        0.041
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000589261.1">ENST00000589261.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000590569.1">ENST00000590569.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000589580.1">ENST00000589580.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000589249.1">ENST00000589249.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000076662">
+               ICAM3
+               </a><br>
+           <br><br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000076662">
+               intercellular adhesion molecule 3
+               </a><br>
+           <br><br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr17%3A47439233..47440250&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr17_+_47439733</a>
+      </td>
+      <td>
+        0.039
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000507337.1">ENST00000507337.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000248714">
+               RP11-1079K10.3
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000248714">
+               RP11-1079K10.3
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr10%3A121295545..121296568&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr10_-_121296045</a>
+      </td>
+      <td>
+        0.036
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000392865.1">ENST00000392865.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000148908">
+               RGS10
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000148908">
+               regulator of G-protein signaling 10
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr11%3A47615710..47616737&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr11_-_47616210</a>
+      </td>
+      <td>
+        0.032
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000302514.3">ENST00000302514.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000172247">
+               C1QTNF4
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000172247">
+               C1q and tumor necrosis factor related protein 4
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr19%3A49140109..49141143&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr19_-_49140609</a>
+      </td>
+      <td>
+        0.032
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000601104.1">ENST00000601104.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000105516">
+               DBP
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000105516">
+               D site of albumin promoter (albumin D-box) binding protein
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr3%3A117715918..117716939&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr3_-_117716418</a>
+      </td>
+      <td>
+        0.032
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000484092.1">ENST00000484092.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000239268">
+               RP11-384F7.2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000239268">
+               RP11-384F7.2
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr17%3A3030375..3031375&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr17_-_3030875</a>
+      </td>
+      <td>
+        0.032
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000328890.2">ENST00000328890.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000183024">
+               OR1G1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000183024">
+               olfactory receptor, family 1, subfamily G, member 1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr12%3A82151944..82152975&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr12_-_82152444</a>
+      </td>
+      <td>
+        0.032
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000549325.1">ENST00000549325.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000550584.2">ENST00000550584.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000139220">
+               PPFIA2
+               </a><br>
+           <br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000139220">
+               protein tyrosine phosphatase, receptor type, f polypeptide (PTPRF), interacting protein (liprin), alpha 2
+               </a><br>
+           <br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A154539746..154540760&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_+_154540246</a>
+      </td>
+      <td>
+        0.032
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000368476.3">ENST00000368476.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000160716">
+               CHRNB2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000160716">
+               cholinergic receptor, nicotinic, beta 2 (neuronal)
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr7%3A127527465..127528504&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr7_+_127527965</a>
+      </td>
+      <td>
+        0.031
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000486037.1">ENST00000486037.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000197157">
+               SND1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000197157">
+               staphylococcal nuclease and tudor domain containing 1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr8%3A124780172..124781264&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr8_+_124780672</a>
+      </td>
+      <td>
+        0.031
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000521166.1">ENST00000521166.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000334705.7">ENST00000334705.7</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000176853">
+               FAM91A1
+               </a><br>
+           <br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000176853">
+               family with sequence similarity 91, member A1
+               </a><br>
+           <br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr2%3A148778070..148779089&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr2_+_148778570</a>
+      </td>
+      <td>
+        0.030
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000407073.1">ENST00000407073.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000204406">
+               MBD5
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000204406">
+               methyl-CpG binding domain protein 5
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr16%3A67514482..67515640&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr16_-_67514982</a>
+      </td>
+      <td>
+        0.029
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000565835.1">ENST00000565835.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000540149.1">ENST00000540149.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000290949.3">ENST00000290949.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000159720">
+               ATP6V0D1
+               </a><br>
+           <br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000159720">
+               ATPase, H+ transporting, lysosomal 38kDa, V0 subunit d1
+               </a><br>
+           <br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr6%3A89855265..89856323&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr6_+_89855765</a>
+      </td>
+      <td>
+        0.028
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000275072.4">ENST00000275072.4</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000146281">
+               PM20D2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000146281">
+               peptidase M20 domain containing 2
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr12%3A82151920..82152941&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr12_-_82152420</a>
+      </td>
+      <td>
+        0.027
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000552948.1">ENST00000552948.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000548586.1">ENST00000548586.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000139220">
+               PPFIA2
+               </a><br>
+           <br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000139220">
+               protein tyrosine phosphatase, receptor type, f polypeptide (PTPRF), interacting protein (liprin), alpha 2
+               </a><br>
+           <br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr9%3A35042324..35043324&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr9_-_35042824</a>
+      </td>
+      <td>
+        0.027
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000595331.1">ENST00000595331.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000269510">
+               FLJ00273
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000269510">
+               FLJ00273
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr17%3A46622941..46623941&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr17_-_46623441</a>
+      </td>
+      <td>
+        0.027
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000330070.4">ENST00000330070.4</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000173917">
+               HOXB2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000173917">
+               homeobox B2
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr6%3A46922159..46923225&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr6_-_46922659</a>
+      </td>
+      <td>
+        0.026
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000265417.7">ENST00000265417.7</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000069122">
+               GPR116
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000069122">
+               G protein-coupled receptor 116
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr22%3A32859927..32860971&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr22_-_32860427</a>
+      </td>
+      <td>
+        0.026
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000534972.1">ENST00000534972.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000397450.1">ENST00000397450.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000397452.1">ENST00000397452.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000184459">
+               BPIFC
+               </a><br>
+           <br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000184459">
+               BPI fold containing family C
+               </a><br>
+           <br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr19%3A49140192..49141209&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr19_-_49140692</a>
+      </td>
+      <td>
+        0.026
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000222122.5">ENST00000222122.5</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000105516">
+               DBP
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000105516">
+               D site of albumin promoter (albumin D-box) binding protein
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr17%3A42992356..42993420&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr17_-_42992856</a>
+      </td>
+      <td>
+        0.025
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000588316.1">ENST00000588316.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000435360.2">ENST00000435360.2</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000586793.1">ENST00000586793.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000588735.1">ENST00000588735.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000588037.1">ENST00000588037.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000592320.1">ENST00000592320.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000253408.5">ENST00000253408.5</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000131095">
+               GFAP
+               </a><br>
+           <br><br><br><br><br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000131095">
+               glial fibrillary acidic protein
+               </a><br>
+           <br><br><br><br><br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr20%3A23432971..23433982&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr20_-_23433471</a>
+      </td>
+      <td>
+        0.025
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000377009.3">ENST00000377009.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000125831">
+               CST11
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000125831">
+               cystatin 11
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A150206517..150207532&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_-_150207017</a>
+      </td>
+      <td>
+        0.025
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000369119.3">ENST00000369119.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000143401">
+               ANP32E
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000143401">
+               acidic (leucine-rich) nuclear phosphoprotein 32 family, member E
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr20%3A23432994..23434014&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr20_-_23433494</a>
+      </td>
+      <td>
+        0.024
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000377007.3">ENST00000377007.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000125831">
+               CST11
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000125831">
+               cystatin 11
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr10%3A21434988..21435988&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr10_-_21435488</a>
+      </td>
+      <td>
+        0.023
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000534331.1">ENST00000534331.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000529198.1">ENST00000529198.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000377118.4">ENST00000377118.4</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000204683">
+               C10orf113
+               </a><br>
+           <br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000204683">
+               chromosome 10 open reading frame 113
+               </a><br>
+           <br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr19%3A39758654..39759654&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr19_+_39759154</a>
+      </td>
+      <td>
+        0.023
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000331982.5">ENST00000331982.5</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000183709">
+               IFNL2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000183709">
+               interferon, lambda 2
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A1763221..1764241&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_-_1763721</a>
+      </td>
+      <td>
+        0.023
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000437146.1">ENST00000437146.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000078369">
+               GNB1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000078369">
+               guanine nucleotide binding protein (G protein), beta polypeptide 1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr7%3A141540721..141541790&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr7_-_141541221</a>
+      </td>
+      <td>
+        0.023
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000350549.3">ENST00000350549.3</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000438520.1">ENST00000438520.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000165076">
+               PRSS37
+               </a><br>
+           <br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000165076">
+               protease, serine, 37
+               </a><br>
+           <br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr4%3A170947861..170948875&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr4_-_170948361</a>
+      </td>
+      <td>
+        0.021
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000393702.3">ENST00000393702.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000198948">
+               MFAP3L
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000198948">
+               microfibrillar-associated protein 3-like
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr10%3A103577682..103578722&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr10_-_103578182</a>
+      </td>
+      <td>
+        0.021
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000439817.1">ENST00000439817.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000198408">
+               MGEA5
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000198408">
+               meningioma expressed antigen 5 (hyaluronidase)
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr2%3A148777823..148778963&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr2_-_148778323</a>
+      </td>
+      <td>
+        0.021
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000440042.1">ENST00000440042.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000535373.1">ENST00000535373.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000540442.1">ENST00000540442.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000536575.1">ENST00000536575.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000115947">
+               ORC4
+               </a><br>
+           <br><br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000115947">
+               origin recognition complex, subunit 4
+               </a><br>
+           <br><br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr14%3A23025034..23026034&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr14_+_23025534</a>
+      </td>
+      <td>
+        0.020
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000557595.1">ENST00000557595.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000259003">
+               AE000662.92
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000259003">
+               Uncharacterized protein
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr14%3A23450967..23452213&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr14_-_23451467</a>
+      </td>
+      <td>
+        0.020
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000361265.4">ENST00000361265.4</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000555074.1">ENST00000555074.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000129474">
+               AJUBA
+               </a><br>
+           
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000259132">
+               RP11-298I3.5
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000129474">
+               ajuba LIM protein
+               </a><br>
+           
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000259132">
+               RP11-298I3.5
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr22%3A32021780..32022797&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr22_-_32022280</a>
+      </td>
+      <td>
+        0.020
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000442379.1">ENST00000442379.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000241878">
+               PISD
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000241878">
+               phosphatidylserine decarboxylase
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A211751573..211752584&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_-_211752073</a>
+      </td>
+      <td>
+        0.018
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000367001.4">ENST00000367001.4</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000170385">
+               SLC30A1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000170385">
+               solute carrier family 30 (zinc transporter), member 1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr11%3A65292384..65293493&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr11_+_65292884</a>
+      </td>
+      <td>
+        0.018
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000527009.1">ENST00000527009.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000142186">
+               SCYL1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000142186">
+               SCY1-like 1 (S. cerevisiae)
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr12%3A56414295..56415336&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr12_+_56414795</a>
+      </td>
+      <td>
+        0.018
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000431367.2">ENST00000431367.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000123411">
+               IKZF4
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000123411">
+               IKAROS family zinc finger 4 (Eos)
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr7%3A97735697..97736711&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr7_+_97736197</a>
+      </td>
+      <td>
+        0.017
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000297293.5">ENST00000297293.5</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000164715">
+               LMTK2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000164715">
+               lemur tyrosine kinase 2
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr14%3A22995312..22996312&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr14_+_22995812</a>
+      </td>
+      <td>
+        0.017
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000390520.1">ENST00000390520.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000211872">
+               TRAJ17
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000211872">
+               T cell receptor alpha joining 17
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr17%3A48784716..48785791&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr17_-_48785216</a>
+      </td>
+      <td>
+        0.017
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000285243.6">ENST00000285243.6</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000154945">
+               ANKRD40
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000154945">
+               ankyrin repeat domain 40
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr10%3A102295116..102296213&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr10_+_102295616</a>
+      </td>
+      <td>
+        0.017
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000299163.6">ENST00000299163.6</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000166135">
+               HIF1AN
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000166135">
+               hypoxia inducible factor 1, alpha subunit inhibitor
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr19%3A8567005..8568040&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr19_-_8567505</a>
+      </td>
+      <td>
+        0.015
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000600262.1">ENST00000600262.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000133246">
+               PRAM1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000133246">
+               PML-RARA regulated adaptor molecule 1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A185285961..185286982&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_-_185286461</a>
+      </td>
+      <td>
+        0.015
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000367498.3">ENST00000367498.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000116679">
+               IVNS1ABP
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000116679">
+               influenza virus NS1A binding protein
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A171810106..171811149&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_+_171810606</a>
+      </td>
+      <td>
+        0.015
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000358155.4">ENST00000358155.4</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000367733.2">ENST00000367733.2</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000355305.5">ENST00000355305.5</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000367731.1">ENST00000367731.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000197959">
+               DNM3
+               </a><br>
+           <br><br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000197959">
+               dynamin 3
+               </a><br>
+           <br><br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr2%3A20650296..20651330&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr2_+_20650796</a>
+      </td>
+      <td>
+        0.013
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000448241.1">ENST00000448241.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000228950">
+               AC023137.2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000228950">
+               AC023137.2
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr10%3A103577662..103578675&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr10_-_103578162</a>
+      </td>
+      <td>
+        0.013
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000361464.3">ENST00000361464.3</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000357797.5">ENST00000357797.5</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000370094.3">ENST00000370094.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000198408">
+               MGEA5
+               </a><br>
+           <br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000198408">
+               meningioma expressed antigen 5 (hyaluronidase)
+               </a><br>
+           <br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr2%3A119699242..119700277&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr2_+_119699742</a>
+      </td>
+      <td>
+        0.013
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000327097.4">ENST00000327097.4</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000019169">
+               MARCO
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000019169">
+               macrophage receptor with collagenous structure
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A159796089..159797117&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_+_159796589</a>
+      </td>
+      <td>
+        0.013
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000368104.4">ENST00000368104.4</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000158714">
+               SLAMF8
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000158714">
+               SLAM family member 8
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr19%3A8566978..8567995&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr19_-_8567478</a>
+      </td>
+      <td>
+        0.013
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000255612.3">ENST00000255612.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000133246">
+               PRAM1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000133246">
+               PML-RARA regulated adaptor molecule 1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr17%3A44679308..44680308&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr17_+_44679808</a>
+      </td>
+      <td>
+        0.013
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000571172.1">ENST00000571172.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000073969">
+               NSF
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000073969">
+               N-ethylmaleimide-sensitive factor
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr19%3A39735146..39736146&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr19_-_39735646</a>
+      </td>
+      <td>
+        0.012
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000413851.2">ENST00000413851.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000197110">
+               IFNL3
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000197110">
+               interferon, lambda 3
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr3%3A164914140..164915167&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr3_-_164914640</a>
+      </td>
+      <td>
+        0.012
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000241274.3">ENST00000241274.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000121871">
+               SLITRK3
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000121871">
+               SLIT and NTRK-like family, member 3
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chrX%3A49089271..49090333&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chrX_-_49089771</a>
+      </td>
+      <td>
+        0.011
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000376251.1">ENST00000376251.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000323022.5">ENST00000323022.5</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000376265.2">ENST00000376265.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000102001">
+               CACNA1F
+               </a><br>
+           <br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000102001">
+               calcium channel, voltage-dependent, L type, alpha 1F subunit
+               </a><br>
+           <br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr15%3A31507674..31508724&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr15_+_31508174</a>
+      </td>
+      <td>
+        0.009
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000559292.2">ENST00000559292.2</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000557928.1">ENST00000557928.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000259448">
+               RP11-16E12.1
+               </a><br>
+           <br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000259448">
+               RP11-16E12.1
+               </a><br>
+           <br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr20%3A44006514..44007533&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr20_-_44007014</a>
+      </td>
+      <td>
+        0.009
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000372726.3">ENST00000372726.3</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000537995.1">ENST00000537995.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000124251">
+               TP53TG5
+               </a><br>
+           <br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000124251">
+               TP53 target 5
+               </a><br>
+           <br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr4%3A120243045..120244062&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr4_-_120243545</a>
+      </td>
+      <td>
+        0.009
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000274024.3">ENST00000274024.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000145384">
+               FABP2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000145384">
+               fatty acid binding protein 2, intestinal
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr10%3A105845174..105846260&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr10_-_105845674</a>
+      </td>
+      <td>
+        0.009
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000353479.5">ENST00000353479.5</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000369733.3">ENST00000369733.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000065618">
+               COL17A1
+               </a><br>
+           <br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000065618">
+               collagen, type XVII, alpha 1
+               </a><br>
+           <br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr4%3A169632810..169633844&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr4_+_169633310</a>
+      </td>
+      <td>
+        0.009
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000510998.1">ENST00000510998.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000129116">
+               PALLD
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000129116">
+               palladin, cytoskeletal associated protein
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr4%3A189922695..189923729&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr4_-_189923195</a>
+      </td>
+      <td>
+        0.009
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000508799.1">ENST00000508799.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000250024">
+               RP11-818C3.1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000250024">
+               RP11-818C3.1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr17%3A10706910..10707921&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr17_-_10707410</a>
+      </td>
+      <td>
+        0.008
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000581851.1">ENST00000581851.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000263429">
+               LINC00675
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000263429">
+               long intergenic non-protein coding RNA 675
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr3%3A185303559..185304624&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr3_+_185304059</a>
+      </td>
+      <td>
+        0.008
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000427465.2">ENST00000427465.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000163904">
+               SENP2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000163904">
+               SUMO1/sentrin/SMT3 specific peptidase 2
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A145825950..145826950&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_-_145826450</a>
+      </td>
+      <td>
+        0.008
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000462900.2">ENST00000462900.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000117262">
+               GPR89A
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000117262">
+               G protein-coupled receptor 89A
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr3%3A45956588..45957612&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr3_-_45957088</a>
+      </td>
+      <td>
+        0.008
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000539217.1">ENST00000539217.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000163818">
+               LZTFL1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000163818">
+               leucine zipper transcription factor-like 1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr14%3A23007500..23008538&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr14_+_23008000</a>
+      </td>
+      <td>
+        0.007
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000390531.1">ENST00000390531.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000211883">
+               TRAJ6
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000211883">
+               T cell receptor alpha joining 6
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A26869097..26870137&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_+_26869597</a>
+      </td>
+      <td>
+        0.007
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000530003.1">ENST00000530003.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000117676">
+               RPS6KA1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000117676">
+               ribosomal protein S6 kinase, 90kDa, polypeptide 1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr11%3A13298686..13299932&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr11_+_13299186</a>
+      </td>
+      <td>
+        0.007
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000527998.1">ENST00000527998.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000396441.3">ENST00000396441.3</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000533520.1">ENST00000533520.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000529825.1">ENST00000529825.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000389707.4">ENST00000389707.4</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000401424.1">ENST00000401424.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000529388.1">ENST00000529388.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000530357.1">ENST00000530357.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000403290.1">ENST00000403290.1</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000361003.4">ENST00000361003.4</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000389708.3">ENST00000389708.3</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000403510.3">ENST00000403510.3</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000482049.1">ENST00000482049.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000133794">
+               ARNTL
+               </a><br>
+           <br><br><br><br><br><br><br><br><br><br><br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000133794">
+               aryl hydrocarbon receptor nuclear translocator-like
+               </a><br>
+           <br><br><br><br><br><br><br><br><br><br><br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr2%3A30143932..30144957&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr2_-_30144432</a>
+      </td>
+      <td>
+        0.006
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000389048.3">ENST00000389048.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000171094">
+               ALK
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000171094">
+               anaplastic lymphoma receptor tyrosine kinase
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr6%3A43737944..43739030&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr6_+_43738444</a>
+      </td>
+      <td>
+        0.006
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000324450.6">ENST00000324450.6</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000417285.2">ENST00000417285.2</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000413642.3">ENST00000413642.3</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000372055.4">ENST00000372055.4</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000482630.2">ENST00000482630.2</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000425836.2">ENST00000425836.2</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000372064.4">ENST00000372064.4</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000372077.4">ENST00000372077.4</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000519767.1">ENST00000519767.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000112715">
+               VEGFA
+               </a><br>
+           <br><br><br><br><br><br><br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000112715">
+               vascular endothelial growth factor A
+               </a><br>
+           <br><br><br><br><br><br><br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr12%3A54651560..54652711&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr12_-_54652060</a>
+      </td>
+      <td>
+        0.006
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000552562.1">ENST00000552562.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000094916">
+               CBX5
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000094916">
+               chromobox homolog 5
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr3%3A45957034..45958155&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr3_-_45957534</a>
+      </td>
+      <td>
+        0.005
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000536047.1">ENST00000536047.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000163818">
+               LZTFL1
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000163818">
+               leucine zipper transcription factor-like 1
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A153522062..153523112&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_-_153522562</a>
+      </td>
+      <td>
+        0.005
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000368714.1">ENST00000368714.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000196154">
+               S100A4
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000196154">
+               S100 calcium binding protein A4
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr8%3A95448655..95449688&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr8_-_95449155</a>
+      </td>
+      <td>
+        0.005
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000481490.2">ENST00000481490.2</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000265817">
+               FSBP
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000265817">
+               fibrinogen silencer binding protein
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr16%3A30936471..30937471&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr16_+_30936971</a>
+      </td>
+      <td>
+        0.004
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000565690.1">ENST00000565690.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000099364">
+               FBXL19
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000099364">
+               F-box and leucine-rich repeat protein 19
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr16%3A16325852..16326990&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr16_+_16326352</a>
+      </td>
+      <td>
+        0.004
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000399336.4">ENST00000399336.4</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000263012.6">ENST00000263012.6</a><br>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000538468.1">ENST00000538468.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000103226">
+               NOMO3
+               </a><br>
+           <br><br>
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000103226">
+               NODAL modulator 3
+               </a><br>
+           <br><br>
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr14%3A68156584..68157584&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr14_-_68157084</a>
+      </td>
+      <td>
+        0.003
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000557564.1">ENST00000557564.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000258466">
+               RP11-1012A1.4
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000258466">
+               RP11-1012A1.4
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr16%3A30936713..30937713&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr16_+_30937213</a>
+      </td>
+      <td>
+        0.003
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000427128.1">ENST00000427128.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000099364">
+               FBXL19
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000099364">
+               F-box and leucine-rich repeat protein 19
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr16%3A24266374..24267417&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr16_+_24266874</a>
+      </td>
+      <td>
+        0.003
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000005284.3">ENST00000005284.3</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000006116">
+               CACNG3
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000006116">
+               calcium channel, voltage-dependent, gamma subunit 3
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr4%3A110748643..110749655&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr4_+_110749143</a>
+      </td>
+      <td>
+        0.003
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000317735.4">ENST00000317735.4</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000180245">
+               RRH
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000180245">
+               retinal pigment epithelium-derived rhodopsin homolog
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr1%3A159796034..159797045&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr1_+_159796534</a>
+      </td>
+      <td>
+        0.003
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000289707.5">ENST00000289707.5</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000158714">
+               SLAMF8
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000158714">
+               SLAM family member 8
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr18%3A31603103..31604103&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr18_-_31603603</a>
+      </td>
+      <td>
+        0.002
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000586553.1">ENST00000586553.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000101746">
+               NOL4
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000101746">
+               nucleolar protein 4
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr12%3A39734283..39735360&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr12_-_39734783</a>
+      </td>
+      <td>
+        0.001
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000552961.1">ENST00000552961.1</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000139116">
+               KIF21A
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000139116">
+               kinesin family member 21A
+               </a><br>
+           
+      </td>
+    </tr>
+    <tr>
+      <td>
+      <a href="http://swissregulon.unibas.ch/jbrowse/JBrowse/?data=hg19_f5&amp;loc=chr3%3A185303462..185304521&tracks=DNA%2Cgenes%2Crefseq_transcripts%2Cpromoters%2Ctfbs">chr3_+_185303962</a>
+      </td>
+      <td>
+        0.001
+      </td>
+      <td>
+                  <a href="http://www.ensembl.org/Homo_sapiens/Transcript/Idhistory?t=ENST00000296257.5">ENST00000296257.5</a><br>
+      </td>
+      <td>
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000163904">
+               SENP2
+               </a><br>
+           
+       </td>      
+      <td class="wrap">
+               <a href="http://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000163904">
+               SUMO1/sentrin/SMT3 specific peptidase 2
+               </a><br>
+           
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+
+
+    <div class="associated_tf"><h3><a name="goa">Gene Ontology Analysis</a></h3></div>
+<h3> Gene overrepresentation in biological_process category:</h3>
+<table class="new_goa_table">
+<thead>
+<tr>
+<th class=".goa_average" style="width: 10%;white-space: nowrap;">Log-likelihood per target&nbsp;</th>
+<th class=".goa_total" style="width: 10%;white-space: nowrap;">Total log-likelihood</th>
+<th class=".goa_term" style="width: 20%;">Term</th>
+<th class=".goa_info" style="width: 60%;">Description</th>
+</tr>
+</thead><tbody>
+
+<tr>
+                                   <td>0.0</td>
+                                   <td>0.1</td>
+                                   <td><a href="http://amigo.geneontology.org/amigo/term/GO:0000706">GO:0000706</a></td>
+                                   <td>meiotic DNA double-strand break processing(GO:0000706) double-strand break repair involved in meiotic recombination(GO:1990918)</td></tr>
+
+<tr>
+                                   <td>0.0</td>
+                                   <td>0.1</td>
+                                   <td><a href="http://amigo.geneontology.org/amigo/term/GO:0038163">GO:0038163</a></td>
+                                   <td>thrombopoietin-mediated signaling pathway(GO:0038163)</td></tr>
+
+<tr>
+                                   <td>0.0</td>
+                                   <td>0.1</td>
+                                   <td><a href="http://amigo.geneontology.org/amigo/term/GO:0086097">GO:0086097</a></td>
+                                   <td>phospholipase C-activating angiotensin-activated signaling pathway(GO:0086097)</td></tr>
+
+<tr>
+                                   <td>0.0</td>
+                                   <td>0.0</td>
+                                   <td><a href="http://amigo.geneontology.org/amigo/term/GO:2000342">GO:2000342</a></td>
+                                   <td>negative regulation of chemokine (C-X-C motif) ligand 2 production(GO:2000342)</td></tr>
+
+</tbody></table>
+<h3> Gene overrepresentation in molecular_function category:</h3>
+<table class="new_goa_table">
+<thead>
+<tr>
+<th class=".goa_average" style="width: 10%;white-space: nowrap;">Log-likelihood per target&nbsp;</th>
+<th class=".goa_total" style="width: 10%;white-space: nowrap;">Total log-likelihood</th>
+<th class=".goa_term" style="width: 20%;">Term</th>
+<th class=".goa_info" style="width: 60%;">Description</th>
+</tr>
+</thead><tbody>
+
+<tr>
+                                   <td>0.0</td>
+                                   <td>0.1</td>
+                                   <td><a href="http://amigo.geneontology.org/amigo/term/GO:0008184">GO:0008184</a></td>
+                                   <td>glycogen phosphorylase activity(GO:0008184)</td></tr>
+
+<tr>
+                                   <td>0.0</td>
+                                   <td>0.1</td>
+                                   <td><a href="http://amigo.geneontology.org/amigo/term/GO:0010861">GO:0010861</a></td>
+                                   <td>thyroid hormone receptor activator activity(GO:0010861) thyroid hormone receptor coactivator activity(GO:0030375)</td></tr>
+
+</tbody></table>
+
+
+</div>
+
+<div id="footer" style="padding-left: 20%;margin-top: 3em;">
+<hr>
+     <table>
+     <tr>
+     <td style="border: none;">
+     <a href="http://www.isb-sib.ch/"><img style="height: 88px;border: none;" src="https://ismara.unibas.ch/sib_images/sib_logo_141x75.gif" alt="SIB"></a>
+     </td>
+     <td style="border: none;">
+     <a href="http://www.biozentrum.unibas.ch/"><img style="height: 88px;border: none;" src="https://ismara.unibas.ch/images/BZ_logo_134x75.png" alt="Biozentrum Universitaet Basel"></a>
+     </td>
+     <td style="border: none;vertical-align: center;">
+     <a href="http://nimwegenlab.org/"><img style="border: none;height: 50px;"src="http://nimwegenlab.org/test/wp-content/uploads/2014/04/nwl_logo.png" alt="Erik van Nimwegen lab"></a>
+     </td>
+     </tr>
+     </table>
+</div>
+
+<div class="loader"></div>
+</body>
+</html>
+
+

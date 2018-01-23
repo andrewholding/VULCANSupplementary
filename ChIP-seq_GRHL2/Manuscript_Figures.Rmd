@@ -1,0 +1,667 @@
+---
+title: "GRHL2"
+author: "Andrew Holding"
+date: "1/18/2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup_grhl2, include=FALSE ,warning=FALSE,echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+
+## Pre-processing
+### Download files
+
+```{bash Download, eval=FALSE ,warning=FALSE,echo=TRUE}
+#!/bin/sh
+java -jar ../java/clarity-tools.jar -l SLX-14333
+```
+
+### Removal of reads in blacklisted sites
+
+```{bash Blacklist, eval=FALSE ,warning=FALSE,echo=TRUE}
+#downloaded from http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz
+
+bl=../blacklists/hg38.blacklist.bed
+
+
+mkdir ./blacklist_filtered
+cd SLX-14333
+for f in *.bam
+do
+	echo $f
+	bedtools intersect -v -abam $f -b $bl  > ../blacklist_filtered/$f
+done
+
+### Re-index
+
+cd ../blacklist_filtered
+for f in *.bam
+do
+samtools index $f
+done
+
+```
+
+### Peak Calling
+
+```{bash MACS, eval=FALSE ,warning=FALSE,echo=TRUE}
+### MACS peak caller
+
+### Run macs on the blacklisted data
+mkdir ./peaks
+cd peaks
+control=../GRHL2_filtered/SLX-14333.D701_D503.bam
+for bam in ../GRHL2_filtered/*.bam
+do
+root=`basename $bam .bam`
+macs2 callpeak -t $bam -c $control -f BAM -n $root -g hs &
+done
+
+```
+
+
+## Differntial binding analysis
+### MA plot
+
+```{r DiffBind MA Plot, fig.cap="MA plot showing changes in GRHL2 binding before and after treatment with 100nM E2." ,warning=FALSE,echo=TRUE}
+
+suppressMessages(library(DiffBind))
+
+if(!file.exists("rdata/003_diffbind.rda")) {
+    GRHL2 <- dba(sampleSheet="samplesheet/samplesheet.csv")
+    GRHL2 <- dba.count(GRHL2, summits=250)
+    GRHL2 <- dba.contrast(GRHL2)
+    GRHL2 <- dba.analyze(GRHL2)
+    save(GRHL2,file="rdata/003_diffbind.rda")
+} else {
+    load("rdata/003_diffbind.rda")  
+}
+
+
+dba.plotMA(GRHL2, bFlip=1)
+```
+
+### PCA
+
+```{r DiffBind PCA, fig.cap="PCA Plot showing clustering of samples by condition" ,warning=FALSE,echo=TRUE}
+
+dba.plotPCA(GRHL2,components = 2:3)
+
+```
+
+### Table of differntiall bound sites
+
+```{r DiffBind Table, results='asis' ,warning=FALSE,echo=TRUE}
+
+library(knitr)
+kable(head(as.data.frame(dba.report(GRHL2))))
+
+```
+
+### Number of sites with increased or decreased binding
+
+```{r DiffBind Up and Down ,warning=FALSE,echo=TRUE}
+
+r<-dba.report(GRHL2,th=1)
+length(r[r$Fold>0])
+length(r[r$Fold<0])
+
+```
+
+## Quality Control 
+### Reproducability of peaks
+```{r Overlap, fig.cap="Peak overlap +E2" ,warning=FALSE,echo=TRUE}
+
+dba.plotVenn(GRHL2,GRHL2$masks$ER, label1="Rep1", label2="Rep2", main="GRHL2 +E2")
+```
+
+```{r Overlap2, fig.cap="Peak overlap -E2", warning=FALSE,echo=TRUE}
+dba.plotVenn(GRHL2,GRHL2$masks$none, label1="Rep1", label2="Rep2", main="GRHL2 -E2")
+```
+
+```{r Called, warning=FALSE,echo=TRUE}
+
+called_none<-rowSums(GRHL2$called[,c(1:3)])
+called_ER<-rowSums(GRHL2$called[,c(4:6)])
+print(paste("Peaks called in -E2 samples:", length(called_none[called_none>0])))
+print(paste("Peaks called in +E2 samples:", length(called_ER[called_ER>0])))
+called_both<-called_none*called_none
+print(paste("Peaks called in both settings:", length(called_both[called_both>0])))
+```
+
+## VULCAN Analysis 
+
+```{r VULCAN ,warning=FALSE,echo=TRUE,results='hide', fig.cap="VULCAN analysis of GRHL2 ChIP-seq data showing change in TF activity on addition of E2 using both METABRIC and TCGA networks"}
+
+
+suppressMessages(library(vulcan))
+
+dist_calc<-function(method,dfanno,genematrix,genesmore,allsamples){
+    # This function structure was strongly suggested
+    # by the Bioconductor reviewer
+    supportedMethods<-c(
+        "closest",
+        "strongest",
+        "sum",
+        "topvar",
+        "farthest",
+        "lowvar"
+    )
+    if(!method%in%supportedMethods){
+        stop("unsupported method ", method)
+    }
+    
+    for (gene in genesmore) {
+        subanno <- dfanno[dfanno$feature == gene, ]
+        
+        if (method == "closest") {
+            closest <- which.min(subanno$distanceToStart)
+            genematrix[gene, allsamples] <- as.numeric(subanno[closest,
+                                                               allsamples])
+        }
+        
+        if (method == "farthest") {
+            farthest <- which.max(subanno$distanceToStart)
+            genematrix[gene, allsamples] <- as.numeric(subanno[farthest,
+                                                               allsamples])
+        }
+        
+        if (method == "sum") {
+            sums <- apply(subanno[, allsamples], 2, sum)
+            genematrix[gene, allsamples] <- as.numeric(sums)
+        }
+        
+        if (method == "strongest") {
+            sums <- apply(subanno[, allsamples], 1, sum)
+            top <- which.max(sums)
+            genematrix[gene, allsamples] <- as.numeric(subanno[top,
+                                                               allsamples])
+        }
+        
+        if (method == "topvar") {
+            vars <- apply(subanno[, allsamples], 1, var)
+            top <- which.max(vars)
+            genematrix[gene, allsamples] <- as.numeric(subanno[top,
+                                                               allsamples])
+        }
+        
+        if (method == "lowvar") {
+            vars <- apply(subanno[, allsamples], 1, var)
+            top <- which.min(vars)
+            genematrix[gene, allsamples] <- as.numeric(subanno[top,
+                                                               allsamples])
+        }
+        
+    }
+    return(genematrix)
+}
+
+
+vulcan.import.dba<- function (dbaobj, samples,intervals = NULL)  
+{
+    dbcounts <- dbaobj
+    listcounts <- dbcounts$peaks
+    names(listcounts) <- dbcounts$samples[, 1]
+    first <- listcounts[[1]]
+    rawmat <- matrix(NA, nrow = nrow(first), ncol = length(listcounts) + 
+                         3)
+    colnames(rawmat) <- c("Chr", "Start", "End", names(listcounts))
+    rownames(rawmat) <- 1:nrow(rawmat)
+    rawmat <- as.data.frame(rawmat)
+    rawmat[, 1] <- as.character(first[, 1])
+    rawmat[, 2] <- as.integer(first[, 2])
+    rawmat[, 3] <- as.integer(first[, 3])
+    for (i in 1:length(listcounts)) {
+        rawmat[, names(listcounts)[i]] <- as.numeric(listcounts[[i]]$RPKM)
+    }
+    peakrpkms <- rawmat
+    rm(rawmat)
+    first <- listcounts[[1]]
+    rawmat <- matrix(NA, nrow = nrow(first), ncol = length(listcounts) + 
+                         3)
+    colnames(rawmat) <- c("Chr", "Start", "End", names(listcounts))
+    rownames(rawmat) <- 1:nrow(rawmat)
+    rawmat <- as.data.frame(rawmat)
+    rawmat[, 1] <- as.character(first[, 1])
+    rawmat[, 2] <- as.integer(first[, 2])
+    rawmat[, 3] <- as.integer(first[, 3])
+    for (i in 1:length(listcounts)) {
+        rawmat[, names(listcounts)[i]] <- as.integer(listcounts[[i]]$Reads)
+    }
+    peakcounts <- rawmat
+    rm(rawmat)
+    vobj <- list(peakcounts = peakcounts, samples = samples, 
+                 peakrpkms = peakrpkms)
+    return(vobj)
+}
+
+prependSampleNames <- function(vobj,prependString){
+    colnames(vobj$peakcounts)[0:-3]<-paste0(prependString,colnames(vobj$peakcounts)[0:-3])
+    vobj$samples[[2]]<-paste0(prependString,vobj$samples[[2]])
+    vobj$samples[[1]]<-paste0(prependString,vobj$samples[[1]])
+    colnames(vobj$peakrpkms)[0:-3]<-paste0(prependString,colnames(vobj$peakrpkms)[0:-3])
+    return(vobj)
+}
+
+loadVulcanNetworks<-function(){
+    regulons<-list()
+    load("networks/laml-tf-regulon.rda")
+    regulons$laml<-regul
+    rm(regul)
+    load("networks/brca-tf-regulon.rda")
+    regulons$tcga<-regul
+    rm(regul)
+    load("networks/metabric-regulon-tfs.rda")
+    regulons$metabric<-regulon
+    rm(regulon)
+    return(regulons)
+}
+
+
+#Slow so just load the file below
+#vobj<-vulcan.import("samplesheet/samplesheet.csv")
+#load(file="003_vobj.Rda")
+samples <- list()
+samples[['ER']]<-c('1a','2a','3a')
+samples[['none']]<-c('1b','2b','3b')
+
+vobj <-vulcan.import.dba(GRHL2,samples)
+
+#vobj<-vulcan.annotate(vobj,lborder=-10000,rborder=10000,method='sum')
+
+vobj <-prependSampleNames(vobj,"X")
+
+lborder=-10000
+rborder=10000
+method='sum'
+#DEBUG
+#source("https://bioconductor.org/biocLite.R")
+#biocLite("TxDb.Hsapiens.UCSC.hg38.knownGene")
+suppressMessages(library("TxDb.Hsapiens.UCSC.hg38.knownGene"))
+
+annotation <- toGRanges(TxDb.Hsapiens.UCSC.hg38.knownGene, 
+                        feature = "gene")
+gr <- GRanges(vobj$peakcounts)
+seqlevels(annotation)<- sub('chr','',seqlevels(annotation))
+anno <- annotatePeakInBatch(gr, AnnotationData = annotation, 
+                            output = "overlapping", FeatureLocForDistance = "TSS", 
+                            bindingRegion = c(lborder, rborder))
+dfanno <- anno
+names(dfanno) <- seq_len(length(dfanno))
+dfanno <- as.data.frame(dfanno)
+allsamples <- unique(unlist(vobj$samples))
+genes <- unique(dfanno$feature)
+peakspergene <- table(dfanno$feature)
+rawcounts <- matrix(NA, nrow = length(genes), ncol = length(allsamples))
+colnames(rawcounts) <- allsamples
+rownames(rawcounts) <- genes
+genesone <- names(peakspergene)[peakspergene == 1]
+for (gene in genesone) {
+    rawcounts[gene, allsamples] <- as.numeric(dfanno[dfanno$feature == 
+                                                         gene, allsamples])
+}
+
+genesmore <- names(peakspergene)[peakspergene > 1]
+rawcounts <- dist_calc(method, dfanno, rawcounts, genesmore, 
+                       allsamples)
+
+gr <- GRanges(vobj$peakrpkms)
+anno <- annotatePeakInBatch(gr, AnnotationData = annotation, 
+                            output = "overlapping", FeatureLocForDistance = "TSS", 
+                            bindingRegion = c(lborder, rborder))
+dfanno <- anno
+names(dfanno) <- seq_len(length(dfanno))
+dfanno <- as.data.frame(dfanno)
+allsamples <- unique(unlist(vobj$samples))
+genes <- unique(dfanno$feature)
+peakspergene <- table(dfanno$feature)
+rpkms <- matrix(NA, nrow = length(genes), ncol = length(allsamples))
+rownames(rpkms) <- genes
+genesone <- names(peakspergene)[peakspergene == 1]
+colnames(rpkms)<-allsamples
+for (gene in genesone) {
+    rpkms[gene, allsamples] <- as.numeric(dfanno[dfanno$feature == 
+                                                     gene, allsamples])
+}
+genesmore <- names(peakspergene)[peakspergene > 1]
+
+rpkms <- dist_calc(method, dfanno, rpkms, genesmore, allsamples)
+rawcounts <- matrix(as.numeric(rawcounts), nrow = nrow(rawcounts), 
+                    dimnames = dimnames(rawcounts))
+rpkms <- matrix(as.numeric(rpkms), nrow = nrow(rpkms), dimnames = dimnames(rpkms))
+vobj$rawcounts <- rawcounts
+colnames(rpkms)<-allsamples
+vobj$rpkms <- rpkms
+
+#DEBUG ENDS
+
+vobj<-vulcan.normalize(vobj)
+
+load(file="networks/metabric-regulon-tfs.rda")
+
+regulons <- loadVulcanNetworks()
+suppressMessages(library("org.Hs.eg.db"))
+list_eg2symbol<-as.list(org.Hs.egSYMBOL[mappedkeys(org.Hs.egSYMBOL)]) 
+
+vobj_results<-list()
+
+#test<-vulcan(vobj,       network=regulon, contrast=c("none","ER")    )
+
+networks<-c("tcga","metabric") #,"laml")
+
+for (network in networks) {
+    vobj_results[[network]]<-vulcan(vobj,
+                                       network=regulons[[network]],
+                                       contrast=c("none","ER"),
+                                       annotation=list_eg2symbol)
+}
+
+
+vobj_objects<-list(vobj_results)
+names(vobj_objects)<-c("GRHL2")
+networks<-c("tcga","metabric")
+```
+
+### Transcription factor activity 
+
+```{r Vulcan plots ,warning=FALSE,echo=TRUE}
+
+plotVulcan <-function(vobj,threshold,network_title,title,plotTF,xlim,ylim) {
+    threshold<-sign(threshold)*p2z(abs(threshold))
+    network=vobj$mrs[,"NES"]
+    tfs<-names(network)
+    networkmat<-cbind(rep(0,length(network)),network[tfs])
+    colnames(networkmat)<-c("0h","45min")
+    matplot(t(networkmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main=title,xlim=xlim,ylim=ylim)
+    axis(1,at=c(1:2),labels=colnames(networkmat))
+    abline(h=c(0,threshold,-threshold),lty=2)
+    text(2,networkmat[plotTF,2],label=names(networkmat[,2][plotTF]),pos=4,cex=0.6,font=2,col="red3")
+    mtext(network_title)    
+}    
+
+par(mfrow=c(2,3))
+for(network in networks){
+    for (vobj_name in names(vobj_objects))
+    {
+
+        vobj<-vobj_objects[[vobj_name]]
+        vobj<-vobj[[network]]
+        #TFs<-getTFs(vobj)
+        TFs=c("ESR1","PGR","FOXA1","GRHL2") #Overide TFS
+        plotVulcan(vobj,0.05, paste0(network," Network"),vobj_name,TFs,xlim=c(1,2.3), ylim=c(min(vobj$mrs[,"NES"]),max(vobj$mrs[,"NES"])))
+        
+        #TFs<-getTFs(vobj,0.05)
+        plotVulcan(vobj,0.05, paste0(network," Network"),vobj_name,TFs,xlim=c(1,2.3), ylim=c(0,max(vobj$mrs[,"NES"])))
+        
+        #TFs<-getTFs(vobj,-0.05)
+        plotVulcan(vobj,-0.05, paste0(network," Network"),vobj_name,TFs,xlim=c(1,2.3), ylim=c(min(vobj$mrs[,"NES"]),0))
+    }
+}
+
+```
+
+### METABRIC TGCA comparison
+
+```{r vulcan scatter ,warning=FALSE,echo=TRUE, fig.cap="Comparision of results of VULCAN analysis for METABRIC and TGCA"}
+
+interect<-intersect(rownames(vobj_results$metabric$mrs), 
+                       rownames(vobj_results$tcga$mrs))
+plot(-log10(vobj_results$metabric$mrs[interect,"pvalue"]),
+     -log10(vobj_results$tcga$mrs[interect,"pvalue"]),
+     pch=20, xlab="Metabric Network Enrichment Score", ylab="TCGA Network Enrichment Score",main="VULCAN analysis of GRHL2 ChIP-Seq")
+
+filtered<-(log10(vobj_results$metabric$mrs[interect,"pvalue"])^2+log10(vobj_results$tcga$mrs[interect,"pvalue"])^2)>2
+
+text(-log10(vobj_results$metabric$mrs[interect,"pvalue"][filtered]),
+     -log10(vobj_results$tcga$mrs[interect,"pvalue"][filtered])-0.1,
+     labels=interect[filtered])
+
+points(-log10(vobj_results$metabric$mrs[interect,"pvalue"][c("GATA3","PGR","FOXA1","ESR1","GRHL2")]),
+       -log10(vobj_results$tcga$mrs[interect,"pvalue"][c("GATA3","PGR","FOXA1","ESR1","GRHL2")]),pch=20,col="red")
+text(-log10(vobj_results$metabric$mrs[interect,"pvalue"][c("GATA3","PGR","FOXA1","ESR1","GRHL2")]),
+     -log10(vobj_results$tcga$mrs[interect,"pvalue"][c("GATA3","PGR","FOXA1","ESR1","GRHL2")])-0.1,col="red",
+     labels=c("GATA3","PGR","FOXA1","ESR1","GRHL2"))
+```
+
+
+## Motif Analysis 
+### Export bed files
+
+```{r bed files up ,warning=FALSE,echo=TRUE}
+
+
+#Note homer needs this as Hg format so you need to change from "1" to "chr1" etc.
+df<-as.data.frame(dba.report(GRHL2))
+df$seqnames<-paste0("chr",df$seqnames)
+
+kable(head(df))
+#write.bed(df,"bed/up.bed")
+```
+
+```{r bed file down ,warning=FALSE,echo=TRUE}
+df_all<-as.data.frame(dba.report(GRHL2, th=1))
+df_all$seqnames<-paste0("chr",df_all$seqnames)
+
+kable(head(df_all))
+#write.bed(df_all,"bed/all.bed")
+```
+### Homer
+
+```{bash Motif, eval=FALSE ,warning=FALSE,echo=TRUE}
+
+
+#Homer
+
+mkdir motifAnalysis
+cd motifAnalysis
+findMotifsGenome.pl ../bed/up.bed hg38 grhl2UpSites
+findMotifsGenome.pl ../bed/all.bed hg38 grhl2AllSites
+
+```
+
+### Generate promoter locations
+
+Generate Bed file of Promoters
+
+```{r, eval=FALSE ,warning=FALSE,echo=TRUE}
+
+require(TxDb.Hsapiens.UCSC.hg38.knownGene)
+txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
+p<-promoters(genes(txdb), upstream = 1500, downstream = 500)
+
+write.bed<-function(df, filename){
+    write.table(as.data.frame(df)[,1:3],
+                filename, quote=FALSE, sep="\t",
+                row.names=FALSE, col.names=FALSE)
+}
+
+write.bed(p,"bed/promoter.bed")
+
+```
+
+## Ovlerap of GRHL2 binding sites with published data 
+
+### Extract ChIA-PET Data
+
+```{bash Merge ChIApet, eval=FALSE}
+#ChIA-pet all 3 https://www.encodeproject.org/experiments/ENCSR000BZZ/
+cd bed
+multiIntersectBed -i *bed6_sorted.bed | awk '{if ($4 > 1) {print} }' > hglft_ChIA_combined.bed
+```
+
+### Find overlapping sites
+
+```{bash, eval=FALSE ,warning=FALSE,echo=TRUE}
+#p300 from Zwart, EMBO, 2011
+#ER from Hurtado 2011
+#gro-seq GSE43835 
+#Rest from Caroll MLL3 paper 
+
+cd bed
+mkdir overlaps
+
+#generate gro-seq interect
+#file1=hglft_E2.40m.rep1.bed 
+#file2=hglft_E2.40m.rep2.bed 
+#output=gro-seq.bed
+#bedtools intersect -sorted -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_foxa1.bed 
+file2=up.bed
+output=foxa1-up.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_ER_Hurtado_2011.bed 
+output=er-up.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+#file1=gro-seq.bed 
+#output=gro-up.bed
+#bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+
+file1=hglft_ChIA_combined.bed 
+output=ChIAPet_up.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_h3k4me1.bed 
+output=h3k4me1-up.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_h3k4me3.bed 
+output=h3k4me3-up.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_p300_ctrl.bed  
+output=p300_ctrl_up.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_p300_e2.bed  
+output=p300_e2_up.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+
+#all peaks
+
+file1=hglft_foxa1.bed 
+file2=all.bed
+output=foxa1-all.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_ER_Hurtado_2011.bed 
+output=er-all.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+#file1=gro-seq.bed 
+#output=gro-all.bed
+#bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_ChIA_combined.bed  
+output=ChIAPet_all.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_h3k4me1.bed 
+output=h3k4me1-all.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_h3k4me3.bed 
+output=h3k4me3-all.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_p300_ctrl.bed  
+output=p300_ctrl_all.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=hglft_p300_e2.bed  
+output=p300_e2_all.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+##Overlap with promoters
+
+file1=overlaps/ChIAPet_up.bed   
+file2=promoter.bed
+output=ChIAPet_up_prom.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+file1=overlaps/ChIAPet_all.bed   
+file2=promoter.bed
+output=ChIAPet_all_prom.bed
+bedtools intersect -a $file1 -b $file2 > overlaps/$output
+
+```
+
+### Count number of overlaping sites
+
+```{bash, eval=FALSE ,warning=FALSE,echo=TRUE}
+cd bed/overlaps
+wc -l *.bed > overlaps.txt
+```
+
+### Table of number of overlaping sites for each factor
+
+```{r, warning=FALSE,echo=TRUE ,warning=FALSE,echo=TRUE}
+overlaps<-read.table("bed/overlaps/overlaps.txt")
+kable(overlaps)
+```
+
+### GRHL2 binding overlap with known factors
+
+```{r, warning=FALSE,echo=TRUE ,warning=FALSE,echo=TRUE,fig.cap="GRHL2 binding overlap with known factors"}
+
+overlapsDF<-cbind(overlaps[1:16,],c('all','all','up','up','all','up','all','up','all','up','all','up','all','up','all','up'))
+overlapsDF<-cbind(overlapsDF,c('all','promoter','all','promoter',rep("all",12)))
+overlapsDF<-cbind(overlapsDF,c(rep("None",14),"E2","E2"))
+colnames(overlapsDF)<-c("Number","Factor","GRHL2","Feature","Treatment")
+overlapsDF$Factor<-c(rep("ChIAPet",4),rep("ER",2),rep("FOXA1",2),rep("H3K4Me1",2),rep("H3K4Me3",2),rep("P300",4))
+overlapsDF$Number<-as.numeric(overlapsDF$Number)
+ChIAPet<-overlapsDF[overlapsDF$Factor=='ChIAPet' & overlapsDF$Feature=='all',]
+ChIAPet$Number<-overlapsDF[overlapsDF$Factor=='ChIAPet' & overlapsDF$Feature=='all',]$Number - overlapsDF[overlapsDF$Factor=='ChIAPet' & overlapsDF$Feature=='promoter',]$Number
+ChIAPet$Feature<-c('enchancer','enchancer')
+overlapsDF<-rbind(overlapsDF,ChIAPet)
+overlapsDF<-data.frame(overlapsDF)
+overlapsDF[overlapsDF$GRHL2=='up',]$Number<-(overlapsDF[overlapsDF$GRHL2=='up',]$Number/355)*100 #355 is the total number of up sites established by DiffBind
+overlapsDF[overlapsDF$GRHL2=='all',]$Number<-(overlapsDF[overlapsDF$GRHL2=='all',]$Number/42721)*100 #Total number of GRHL2 sites
+
+library(lattice)
+
+barchart(Number ~ Factor ,data=overlapsDF[overlapsDF$Factor != 'ChIAPet',], 
+         par.settings = simpleTheme(col=c("lightblue","pink")),
+         group=GRHL2,auto.key=list(space="top", columns=2, text=c('All GRHL2 Sites','GRHL2 Sites Responsive to E2')),
+         main="GRHL2 Binding Overlap with Known Factors", ylab="Percentage of GRHL2 sites that overlap", 
+         xlab="Factor")
+```
+
+### GRHL2 binding overlap with P300 binding sites
+
+```{r P300, fig.cap="GRHL2 binding overlap with P300 binding sites"}
+
+barchart(Number ~ Treatment ,data=overlapsDF[overlapsDF$Factor=='P300',],
+         group=GRHL2,
+         auto.key=list(space="top",columns=2, text=c('All GRHL2 Sites','GRHL2 Responsive to E2')),
+         par.settings = simpleTheme(col=c("lightblue","pink")),
+         main="GRHL2 overlap with P300 binding sites",
+         xlab="P300 ChIP-Seq Condition",
+         ylab="Percentage of GRHL2 sites that overlap")
+```
+
+### GRHL2 overlap with ChIA-PET sites
+
+```{r ChIAPet, fig.cap="GRHL2 overlap with ChIA-PET sites"}
+
+barchart(Number ~ Feature ,data=overlapsDF[overlapsDF$Factor=='ChIAPet',],
+         group=GRHL2,
+         auto.key=list(space="top",columns=2, text=c('All GRHL2 Sites','GRHL2 Sites Responsive to E2')),
+         par.settings = simpleTheme(col=c("lightblue","pink")),
+         main="GRHL2 overlap with ChIA-PET sites",
+         xlab="Genomic Feature ChIP-Seq Condition",
+         ylab="Percentage of GRHL2 sites that overlap")
+```
+
+---
+#Gviz for chr2:11,517,385-11,630,055 #GREB1 and chr17:40,296,682-40,349,154 #RARA
+---

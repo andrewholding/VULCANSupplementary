@@ -1,0 +1,1816 @@
+---
+title: "Supplementary"
+author: "Andrew Holding & Matt Eldridge"
+date: "9 January 2017"
+output:
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    fig_caption: yes
+header-includes:
+  - \usepackage{longtable}
+  - \usepackage{booktabs}
+---
+
+****************************
+
+```{r configuration, include = FALSE, cache = FALSE}
+knitr::opts_chunk$set(cache = FALSE)
+```
+
+```{r load_libraries, include = FALSE, cache = FALSE}
+library(tidyr)
+library(dplyr)
+library(tibble)
+library(MSnbase)
+library(RColorBrewer)
+library(ggplot2)
+library(kfigr)
+library(gridExtra)
+library(xtable)
+library(limma)
+```
+
+```{r load_functions, include = FALSE, cache = FALSE}
+source("Functions/plots.R")
+source("Functions/normalization.R")
+```
+
+```{r xtable_options, include=FALSE, cache = FALSE}
+
+options(xtable.comment = FALSE)
+options(xtable.booktabs = TRUE)
+
+addtorow          <- list()
+addtorow$pos      <- list()
+addtorow$pos[[1]] <- c(0)
+addtorow$command  <- c(paste("\\hline \n",
+                             "\\endhead \n",
+                             "\\hline \n",
+                             "{\\footnotesize Continued on next page} \n",
+                             "\\endfoot \n",
+                             "\\endlastfoot \n",sep=""))
+```
+
+```{r read_protein_information, include = FALSE}
+proteinInfo <- read.delim("ReferenceData/protein_gene_description.txt", stringsAsFactors = FALSE)
+```
+
+```{r read_metadata, include = FALSE}
+metadata <- read.delim("SampleData/metadata.txt", check.names = FALSE)
+runs <- levels(metadata$Run)
+groups <- levels(metadata$Group)
+controlGroup <- "IgG"
+```
+
+```{r colours, include = FALSE}
+groupColours <- c(brewer.pal(9, "Blues")[5:7], brewer.pal(9, "RdPu")[5:7], brewer.pal(9, "Greens")[6])
+names(groupColours) <- groups
+sampleColours <- groupColours[metadata$Group]
+names(sampleColours) <- metadata$Sample
+```
+
+```{r read_intensities, include = FALSE}
+
+peptideData <- list()
+
+for (run in runs)
+{
+  cat(run, "\n", sep = "")
+
+  data <- read.delim(paste("ProcessedData/", run, ".txt", sep = ""), stringsAsFactors = FALSE, check.names = FALSE)
+
+  peptideCount <- data %>% select(Sequence, Modifications) %>% distinct %>% nrow
+  cat("Peptides:", peptideCount, "\n", sep = "")
+  if (peptideCount != nrow(data))
+    stop("Error: multiple rows for at least one peptide/modification (is this PSM-level data?)")
+
+  proteinCount <- data %>% select(Protein) %>% distinct %>% nrow
+  cat("Proteins:", proteinCount, "\n", sep = "")
+
+  sampleColumns <- metadata %>%
+    filter(Run == run) %>%
+    select(Group) %>%
+    unlist(use.names = FALSE) %>%
+    as.character
+
+  data <- MSnSet(
+    exprs = data %>% select(one_of(sampleColumns)) %>% as.matrix,
+    fData = data %>% select(Sequence, Modifications, Protein),
+    pData = metadata %>% filter(Run == run) %>% mutate(RowName = Group) %>% column_to_rownames("RowName")
+  )
+
+  peptideData[[run]] <- data
+}
+```
+
+
+# Introduction
+
+This report is from an analysis of the RIME-TMT proteomics data for an experiment carried out by Andrew Holding to quantify specific interactors of estrogen receptor (ER) and forkhead box protein A1 (FOXA1) in MCF-7 cells.
+
+The RIME (Rapid Immunoprecipitation of Endogenous Proteins) technique was used to pull down ER and FOXA1 and their interacting proteins, which were subsequently assessed and quantitated using mass spectrometry with tandem mass tags (TMT). TMT runs were carried out for 3 biological replicates, estrogen-starved MCF-7 cells from the same cell line at different times/passages, before and after addition of estrogen with samples taken at 3 different time points -- 0, 45 and 90 minutes after estrogen addition. A pull down of Immunoglobulin G (IgG) was also run as a control.
+
+The digests from two of the biological replicates (PR622 and PR650) were analyzed with 3 separate runs of the mass spectrometer to increase coverage; data from the repeated runs were combined prior to the analysis carried out here. The other sample (PR590) was run once only.
+
+`r figr("samples_table", TRUE, type="Table")` shows the isobaric tags used for each sample within each of the runs.
+
+```{r samples_table, echo=FALSE, warning=FALSE, message=FALSE, results='asis'}
+print(
+  xtable(
+    metadata %>% select(Run, Tag, Group) %>% spread(Run, Tag),
+    caption = "Isobaric tags used for each sample (group) and run."
+  ),
+  include.rownames = FALSE,
+  size = "\\setlength{\\tabcolsep}{12pt}"
+)
+```
+
+
+# Peptide intensity data
+
+Raw spectra were processed using Proteome Discover 2.1 to produce peptide-level intensity data with a single set of intensity values per distinct peptide. Only peptides with unique high-confidence protein matches were included.
+
+Multiple peptide-spectrum matches (PSMs) for the same peptide were combined using Proteome Discoverer by summing the PSM-level intensities. Peptide sequences with different modifications are treated as distinct peptides and the data provided contain intensities values for each modification identified for a peptide sequence. Several distinct peptide sequences (with modifications) may have been identified for any given protein.
+
+`r figr("peptide_protein_count_table", TRUE, type="Table")` shows the numbers of distinct peptides and proteins obtained in each TMT run. Also given are the numbers of peptides and proteins after filtering peptides with missing intensity values in one or more TMT channels.
+
+```{r filter_missing_intensities, include=FALSE}
+peptideDataExcludingMissingValues <- list()
+for (run in runs)
+{
+  cat(run, "\n", sep = "")
+  data <- peptideData[[run]]
+  data <- data[which(complete.cases(exprs(data))),]
+  peptideDataExcludingMissingValues[[run]] <- data
+}
+```
+
+```{r combine_peptide_intensities, include = FALSE}
+
+# function for combining data for runs into single MSnSet object
+combineRuns <- function(runData, runs)
+{
+  combinedData <- NULL
+
+  for (run in runs)
+  {
+    data <- runData[[run]]
+
+    sampleNames(data) <- pData(data) %>%
+      transmute(Sample = paste(Run, Group, sep = ":")) %>%
+      unlist %>%
+      as.character
+
+    featureNames(data) <- fData(data) %>%
+      transmute(ID = paste(Sequence, Modifications, sep = "|")) %>%
+      unlist %>%
+      as.character()
+
+    if (is.null(combinedData))
+    {
+      combinedData <- data
+    } else
+    {
+      combinedData <- BiocGenerics::combine(combinedData, data)
+    }
+  }
+
+  return(combinedData)
+}
+
+combinedPeptideData <- combineRuns(peptideData, runs)
+combinedPeptideDataExcludingMissingValues <- combineRuns(peptideDataExcludingMissingValues, runs)
+```
+
+```{r peptide_protein_count_table, echo=FALSE, warning=FALSE, message=FALSE, results='asis'}
+
+countProteins <- function(data) data %>% fData %>% select(Protein) %>% distinct %>% nrow
+
+peptideData[["All"]] <- combinedPeptideData
+peptideDataExcludingMissingValues[["All"]] <- combinedPeptideDataExcludingMissingValues
+
+counts <- bind_rows(
+  peptideData %>% sapply(nrow) %>% t %>% as.data.frame %>% mutate(label = "Peptides"),
+  peptideDataExcludingMissingValues %>% sapply(nrow) %>% t %>% as.data.frame %>% mutate(label = "Peptides with no missing values"),
+  peptideData %>% sapply(countProteins) %>% t %>% as.data.frame %>% mutate(label = "Proteins"),
+  peptideDataExcludingMissingValues %>% sapply(countProteins) %>% t %>% as.data.frame %>% mutate(label = "Proteins with no missing values")
+)
+rownames(counts) <- counts$label
+counts <- counts %>% select(-label)
+
+peptideData[["All"]] <- NULL
+peptideDataExcludingMissingValues[["All"]] <- NULL
+
+print(
+  xtable(
+    counts,
+    align = "lrrrr",
+    caption = "Numbers of peptides and proteins observed in each run."
+  ),
+  include.rownames = TRUE,
+  size = "\\setlength{\\tabcolsep}{12pt}"
+)
+```
+
+`r figr("intensity_plots", TRUE, type="Figure")` shows the distribution of intensities for each sample within each run.
+
+```{r intensity_plots, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Density plots of intensities from each run.", fig.height=8, fig.width=5}
+
+minIntensity <- -2
+maxIntensity <- 15
+
+plots <- vector("list")
+
+for (i in 1:length(runs))
+{
+  run <- runs[i]
+  intensities <- peptideData[[run]] %>% exprs %>% log2 %>% as.data.frame
+  plots[[run]] <- intensityDistributionPlot(
+    intensities,
+    groups,
+    groupColours,
+    title = run,
+    xlab=expression(log[2](intensity)),
+    minIntensity = minIntensity,
+    maxIntensity = maxIntensity,
+    showLegend = (i == 1))
+}
+
+do.call("grid.arrange", c(plots, ncol = 1))
+```
+
+
+## Missing intensity values
+
+Missing intensity values can result even though ions are present at detectable concentrations due to the stochastic nature of the mass spectrometry acquisition method. It is reasonable to expect that these missing values are randomly distributed in the data. Alternatively, missing values may occur when there is a low abundance of ions, below the limit of detection of the instrument. These biologically relevant missing values are not randomly distributed, affecting only those proteins that are expressed at low levels in the samples analysed. The R/Bioconductor package `MSnBase` provides imputation methods for both types of missing value.
+
+In this analysis, missing values have been handled in 3 different ways. The first approach is to exclude all peptide-level mesasurements where there is a missing value for one or more of the samples within a run. In addition, two imputation methods have been performed: one in which the missing values are set to the smallest non-missing value in the data for that run and the other in which k-nearest neighbour (KNN) averaging is applied.
+
+```{r imputation, include = FALSE}
+peptideDataImputedMin <- list()
+peptideDataImputedKNN <- list()
+for (run in runs)
+{
+  peptideDataImputedMin[[run]] <- impute(peptideData[[run]], "min")
+  peptideDataImputedKNN[[run]] <- impute(peptideData[[run]], "knn")
+}
+```
+
+`r figr("intensity_plots_impute_min", TRUE, type="Figure")` shows the distribution of intensities for each sample within each run following imputation using the smallest non-missing values. A small hump just below zero on the log~2~ scale is clearly visible for each run.
+
+```{r intensity_plots_impute_min, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Density plots of intensities from each run following imputation of missing values using the smallest non-missing value in the data for each run.", fig.height=8, fig.width=5}
+
+minIntensity <- -2
+maxIntensity <- 15
+
+plots <- vector("list")
+
+for (i in 1:length(runs))
+{
+  run <- runs[i]
+  intensities <- peptideDataImputedMin[[run]] %>% exprs %>% log2 %>% as.data.frame
+  plots[[run]] <- intensityDistributionPlot(
+    intensities,
+    groups,
+    groupColours,
+    title = run,
+    xlab=expression(log[2](intensity)),
+    minIntensity = minIntensity,
+    maxIntensity = maxIntensity,
+    showLegend = (i == 1))
+}
+
+do.call("grid.arrange", c(plots, ncol = 1))
+```
+
+
+# Normalization of intensity data
+
+The intensity distribution for PR622 suggests that the labeled samples have been pooled with differing protein concentrations and that some normalization is required to properly assess differences between groups. Normalization techniques that are commonly applied to microarray expression data and mRNA sequencing data assume that only a few genes, e.g. a few hundred out of tens of thousands, are expressed at very different levels between samples. This assumption may not hold for a RIME experiment where a specific set of interacting proteins is targeted. For example, if the majority of interacting proteins were to bind less strongly at one time point relative to another, quantile normalization or scale normalization approaches would have the effect of removing the general trend. In this case, following normalization, those proteins that bind less strongly may appear to be largely unchanged, while proteins with very similar levels of binding at the different time points would have artificially increased binding levels. Therefore some care is required when interpreting the results of a differential binding analysis for RIME TMT experiments.
+
+In this analysis, quantile normalization and scale normalization were applied for each run separately.
+
+The IgG control was used to assess non-specific binding. The binding of a protein was considered to be non-specific if the binding level of that protein in the condition of interest, e.g. ER at 45 minutes, was not significantly above the level observed for the IgG control. Proteins detected with the IgG control are expressed at lower levels in the PR590 and PR650 runs. Normalization of the IgG control along with the other samples would make it more difficult to distinguish between specific and non-specific binding since the intensities of the IgG control would be scaled to a similar level of those of the other samples.
+
+Among a number of normalization approaches tested here, normalizations were carried out that both include and exclude the IgG control. `r figr("normalized_intensity_plots", TRUE, type="Figure")` shows the normalized intensity distributions following scale normalization of all peptide intensities including those with missing values. `r figr("normalizedExcludingIgG_intensity_plots", TRUE, type="Figure")` shows the normalized intensity distributions following scale normalization for all samples except the IgG controls.
+
+```{r normalization, include = FALSE}
+
+peptideDataNormalized <- list()
+
+peptideDataNormalized[["IncludeMissingValues_NoNormalization"]] <- peptideData
+peptideDataNormalized[["ExcludeMissingValues_NoNormalization"]] <- peptideDataExcludingMissingValues
+peptideDataNormalized[["ImputeMin_NoNormalization"]] <- peptideDataImputedMin
+peptideDataNormalized[["ImputeKNN_NoNormalization"]] <- peptideDataImputedKNN
+
+for (missingValueMethod in c("IncludeMissingValues", "ExcludeMissingValues", "ImputeMin", "ImputeKNN"))
+{
+  peptideDataForNormalization <- peptideDataNormalized[[paste(missingValueMethod, "NoNormalization", sep = "_")]]
+
+  quantileNormalizationAnalysis <- paste(missingValueMethod, "QuantileNormalization", sep = "_")
+  quantileNormalizationExcludingIgGAnalysis <-
+    paste(missingValueMethod, "QuantileNormalizationExcludingIgG", sep = "_")
+  scaleNormalizationAnalysis <- paste(missingValueMethod, "ScaleNormalization", sep = "_")
+  scaleNormalizationExcludingIgGAnalysis <-
+    paste(missingValueMethod, "ScaleNormalizationExcludingIgG", sep = "_")
+  scaleNormalizationTopIgGAnalysis <- paste(missingValueMethod, "ScaleNormalizationTopIgG", sep = "_")
+
+  peptideDataNormalized[[quantileNormalizationAnalysis]] <- list()
+  peptideDataNormalized[[quantileNormalizationExcludingIgGAnalysis]] <- list()
+  peptideDataNormalized[[scaleNormalizationAnalysis]] <- list()
+  peptideDataNormalized[[scaleNormalizationExcludingIgGAnalysis]] <- list()
+  peptideDataNormalized[[scaleNormalizationTopIgGAnalysis]] <- list()
+
+  numberOfPeptidesWithHighestIgG <- 10
+
+  for (run in runs)
+  {
+    data <- peptideDataForNormalization[[run]]
+
+    # quantile normalization
+    peptideDataNormalized[[quantileNormalizationAnalysis]][[run]] <- normalize(data, method = "quantiles")
+    
+    # scale normalization
+    peptideDataNormalized[[scaleNormalizationAnalysis]][[run]] <- normalizeMedianScaling(data)
+
+    samples <- setdiff(sampleNames(data), controlGroup)
+
+    # quantile normalization
+    normalized <- normalize(data[,samples], method = "quantiles")
+    peptideDataNormalized[[quantileNormalizationExcludingIgGAnalysis]][[run]] <- data
+    exprs(peptideDataNormalized[[quantileNormalizationExcludingIgGAnalysis]][[run]])[,samples] <-
+      exprs(normalized)
+
+    # scale normalization
+    peptideDataNormalized[[scaleNormalizationExcludingIgGAnalysis]][[run]] <-
+      normalizeMedianScaling(data, samples)
+
+    # scale normalization using peptides with highest IgG intensities for computing sample medians
+    controlIntensities <- data %>%
+      exprs %>%
+      as.data.frame %>%
+      select(one_of(controlGroup)) %>%
+      unlist %>%
+      as.numeric
+    controlIntensities[is.na(controlIntensities)] <- -Inf
+    controlIntensityOrder <- rev(order(controlIntensities))
+    peptideDataNormalized[[scaleNormalizationTopIgGAnalysis]][[run]] <-
+      normalizeMedianScaling(data, rowsForCalculatingMedian = controlIntensityOrder[1:numberOfPeptidesWithHighestIgG])
+  }
+}
+```
+
+```{r normalized_intensity_plots, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Density plots of normalized intensities from each TMT run where scale normalization was applied to peptide intensities that include misssing values.", fig.height=8, fig.width=5}
+
+analysis <- "IncludeMissingValues_ScaleNormalization"
+
+minIntensity <- 0
+maxIntensity <- 15
+
+plots <- vector("list")
+
+for (i in 1:length(runs))
+{
+  run <- runs[i]
+  intensities <- peptideDataNormalized[[analysis]][[run]] %>% exprs %>% log2 %>% as.data.frame
+  plots[[run]] <- intensityDistributionPlot(
+    intensities,
+    groups,
+    groupColours,
+    title = run,
+    xlab=expression(log[2](intensity)),
+    minIntensity = minIntensity,
+    maxIntensity = maxIntensity,
+    showLegend = (i == 1))
+}
+
+do.call("grid.arrange", c(plots, ncol = 1))
+```
+
+```{r normalizedExcludingIgG_intensity_plots, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Density plots of normalized intensities from each TMT run where scale normalization was applied to peptide intensities for all samples except the IgG controls.", fig.height=8, fig.width=5}
+
+analysis <- "IncludeMissingValues_ScaleNormalizationExcludingIgG"
+
+minIntensity <- 0
+maxIntensity <- 15
+
+plots <- vector("list")
+
+for (i in 1:length(runs))
+{
+  run <- runs[i]
+  intensities <- peptideDataNormalized[[analysis]][[run]] %>% exprs %>% log2 %>% as.data.frame
+  plots[[run]] <- intensityDistributionPlot(
+    intensities,
+    groups,
+    groupColours,
+    title = run,
+    xlab=expression(log[2](intensity)),
+    minIntensity = minIntensity,
+    maxIntensity = maxIntensity,
+    showLegend = (i == 1))
+}
+
+do.call("grid.arrange", c(plots, ncol = 1))
+```
+
+A further normalization approach was attempted that scales the data from all samples within a run based on a subset of peptides that are considered most likely to be at similar concentrations between the samples. The assumption is that the peptides with the highest intensity values in the IgG control are the result of non-specific binding and that that binding is consistent across all samples. Similar to the scale normalization applied in the first approach, the median intensity within each sample is computed to determine a scaling factor for each sample within a run but the median computed only uses the `r numberOfPeptidesWithHighestIgG` peptides with the highest IgG measurements. As before, normalization is carried out within each run separately.
+
+`r figr("normalizedIgG_intensity_plots", TRUE, type="Figure")` shows the resulting normalized intensity distributions. Strikingly, the IgG intensity distribution is shifted to lower values in run PR622, making it more consistent with the other 2 runs.
+
+
+```{r normalizedIgG_intensity_plots, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Density plots of normalized intensities from each TMT run where scale normalization is applied based on", numberOfPeptidesWithHighestIgG, "peptides with the highest IgG intensities in each run."), fig.height=8, fig.width=5}
+
+analysis <- "IncludeMissingValues_ScaleNormalizationTopIgG"
+
+minIntensity <- 0
+maxIntensity <- 15
+
+plots <- vector("list")
+
+for (i in 1:length(runs))
+{
+  run <- runs[i]
+  intensities <- peptideDataNormalized[[analysis]][[run]] %>% exprs %>% log2 %>% as.data.frame
+  plots[[run]] <- intensityDistributionPlot(
+    intensities,
+    groups,
+    groupColours,
+    title = run,
+    xlab=expression(log[2](intensity)),
+    minIntensity = minIntensity,
+    maxIntensity = maxIntensity,
+    showLegend = (i == 1))
+}
+
+do.call("grid.arrange", c(plots, ncol = 1))
+```
+
+
+# Protein-level quantification
+
+Protein-level quantification was carried out for each run separately by summing normalized intensity values for all peptides matching to a particular protein. This is similar in principle to the gene-level quantification that is carried out during microarray analysis or the read-counting approach in RNA-Seq. Essentially, all signal attributable to a particular protein is assigned to that protein. Intensity values vary in magnitude depending on the elution profile for the peptide and when the peptide is sampled. Relative intensities for a peptide between the tags or samples within a run should be consistent but the signal may include some contribution from a contaminating, co-eluting peptide, the extent of which may differ for different PSMs. In summing intensities from multiple measurements for the same peptide, those peptides that have higher levels of intensity values will have a greater weight in determining the overall intensity; higher intensity measurements are likely to more accurately reflect differences between samples so this may be advantageous.
+
+When no imputation of missing values was carried out, peptides with missing values in one or more samples were excluded from the summation. Missing values that arise for technical reasons instead of being at undetectable levels in a sample would otherwise reduce the overall intensity in that sample relative to other samples.
+
+```{r summarize_protein_intensities, include=FALSE}
+
+proteinData <- list()
+
+for (analysis in names(peptideDataNormalized))
+{
+  peptideDataForSummarization <- peptideDataNormalized[[analysis]]
+
+  proteinData[[analysis]] <- list()
+
+  for (run in runs)
+  {
+    data <- peptideDataForSummarization[[run]]
+
+    # exclude rows with missing values (will have no effect if imputation carried out)
+    data <- data[which(complete.cases(exprs(data))),]
+
+    data <- combineFeatures(data, groupBy = fData(data)$Protein, fun = "sum", na.rm = FALSE)
+    fData(data) <- fData(data) %>% select(Protein)
+
+    proteinData[[analysis]][[run]] <- data
+  }
+}
+```
+
+```{r combine_protein_intensities, include = FALSE}
+
+combinedProteinData <- list()
+
+for (analysis in names(proteinData))
+{
+  for (run in runs)
+  {
+    data <- proteinData[[analysis]][[run]]
+
+    sampleNames(data) <- pData(data) %>%
+      transmute(Sample = paste(Run, Group, sep = ":")) %>%
+      unlist %>%
+      as.character
+
+    if (is.null(combinedProteinData[[analysis]]))
+    {
+      combinedProteinData[[analysis]] <- data
+    } else
+    {
+      combinedProteinData[[analysis]] <- BiocGenerics::combine(combinedProteinData[[analysis]], data)
+    }
+  }
+}
+```
+
+```{r replicate_counts, include=FALSE}
+
+isRepresented <- function(x) any(!is.na(x))
+
+getReplicateCounts <- function(data)
+{
+  metadata <- pData(data) %>% rownames_to_column("Sample")
+
+  intensities <- data %>%
+    exprs %>%
+    as.data.frame %>%
+    mutate(N = 0)
+
+  for (run in runs)
+  {
+    samples <- metadata %>%
+      filter(Run == run) %>%
+      select(Sample) %>%
+      unlist %>%
+      as.character
+
+    intensities <- intensities %>%
+      mutate(N = N + apply(select(., one_of(samples)), 1, isRepresented))
+  }
+
+  replicateCounts <- intensities %>%
+    select(N) %>%
+    mutate(Count = 0) %>%
+    group_by(N) %>%
+    summarize_each(funs(length)) %>%
+    ungroup %>%
+    mutate(N = as.character(N))
+
+  replicateCounts <- replicateCounts %>%
+    bind_rows(data_frame(N = "total", Count = sum(replicateCounts$Count)))
+
+  return(replicateCounts)
+}
+
+replicateCounts <- getReplicateCounts(combinedProteinData[["ImputeKNN_ScaleNormalization"]])
+
+replicateCountTableData <- inner_join(
+  getReplicateCounts(combinedProteinData[["ImputeKNN_ScaleNormalization"]]) %>%
+    rename(`Including missing values` = Count),
+  getReplicateCounts(combinedProteinData[["ExcludeMissingValues_ScaleNormalization"]]) %>%
+    rename(`Excluding missing values` = Count),
+  by = "N"
+)
+
+replicateCountTableData <- replicateCountTableData %>%
+  as.data.frame %>%
+  column_to_rownames(var = "N") %>%
+  t %>%
+  as.data.frame %>%
+  rownames_to_column(var = "Runs/replicates")
+```
+
+The statistical analysis of differential binding between groups that follows requires at least 3 observations per group. `r figr("replicate_count_table", TRUE, type="Table")` gives the number of protein identified in just a single run, two runs or all three runs. A total of `r (replicateCounts %>% filter(N == "all"))$Count` proteins were identified across all runs of which `r (replicateCounts %>% filter(N == "3"))$Count` were observed in all three runs, allowing for a statistical analysis. log~2~ fold changes are still computed for proteins identified only in one or two of the runs, but no measure of the statistical significance is given in the differential binding analysis.
+
+```{r replicate_count_table, echo=FALSE, warning=FALSE, message=FALSE, results='asis'}
+# colnames(replicateCounts) <- c("Runs/replicates", "Proteins (includes missing values)", "Proteins")
+print(
+  xtable(
+    replicateCountTableData,
+    # align = "llr",
+    caption = "Numbers of proteins identified in differing numbers of runs and total number of proteins identified in all runs."
+  ),
+  include.rownames = FALSE,
+  size = "\\setlength{\\tabcolsep}{12pt}"
+)
+```
+
+
+# Principal Component Analysis
+
+Protein-level intensities were scaled to sum to 1.0 for each protein within a run, allowing for comparison across runs in a principal component analysis (PCA).
+
+`r figr("pca_plot", TRUE, type="Figure")` shows a PCA plot for the first two principal components using all proteins that were sampled in all three runs. The plot shows a clear separation of the ER, FOXA1 and IgG control pull-downs. The 0, 45 and 90 minute timepoints within each of the ER and FOXA1 groups are not completely separated in the first two principal components. `r figr("pca_plot_er", TRUE, type="Figure")` shows the PCA plot for just the ER samples.
+
+```{r pca_plot, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Principal Componenent Analysis for proteins sampled in all 3 runs. The PCA was based on protein-level data resulting from summation of quantile normalized peptide intensities in which missing values were imputed using KNN-based nearest neighbour averaging. The first two principal components are displayed.", fig.height=5}
+
+data <- combinedProteinData[["ImputeKNN_QuantileNormalization"]]
+
+metadata <- pData(data) %>% rownames_to_column("Sample")
+
+scaledIntensities <- data %>%
+  exprs %>%
+  as.data.frame %>%
+  filter(complete.cases(.))
+
+for (run in runs)
+{
+  samples <- metadata %>%
+    filter(Run == run) %>%
+    select(Sample) %>%
+    unlist %>%
+    as.character
+
+  summedIntensities <- scaledIntensities %>%
+    select(one_of(samples)) %>%
+    rowSums
+
+  scaledIntensities <- scaledIntensities %>%
+    mutate_each(funs(. / summedIntensities), one_of(samples))
+}
+
+print(pcaPlot(scaledIntensities, metadata$Sample, metadata$Group, groupColours, labels = metadata$Run, legend = TRUE))
+```
+
+```{r pca_plot_er, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Principal Componenent Analysis for ER-interactng proteins sampled in all 3 runs. The first two principal components are displayed.", fig.height=5}
+
+metadata <- metadata %>% filter(grepl("^ER", Group))
+
+print(pcaPlot(scaledIntensities, metadata$Sample, metadata$Group, groupColours, labels = metadata$Run, legend = TRUE))
+```
+
+
+# Differential Binding
+
+```{r differential_expression_paramters, include=FALSE}
+significanceLevel <- 0.05
+controlLogFoldChangeThreshold <- 1.0
+```
+
+A statistical analysis of differentially-expressed peptides was carried out using **limma**, a R/Bioconductor package commonly used in the analysis of microarray and RNA-seq data, but applicable to data from any quantitative expression technology.
+
+Limma uses linear models to assess differential expression in the context of multifactor experimental designs. It is able to analyze comparisons between many RNA targets simultaneously (or in this case many proteins) and has features that make these analyses stable even for experiments with small numbers of samples; this is achieved by borrowing information across genes (proteins).
+
+In this analysis, limma was used to estimate log~2~ fold changes and standard errors by fitting a linear model for each protein where the model includes variables for the group (the ER and FOXA1 pull-downs at 0, 45 and 90 minute time points and the IgG control at 45 minutes) and the run. This is essentially a two-way ANOVA, a generalization of a paired analysis, in which comparisons between pull-downs at different time points are made within each run.
+
+Limma employs an empirical Bayes method to moderate the standard errors of the estimated log~2~ fold changes; this results in more stable inference and improved power, especially for experiments with small numbers of replicates.
+
+Multiple testing correction of p-values was applied using the Benjamini-Hochberg method to control the false discovery rate (FDR). The adjusted p-value (also known as a q-value) can be understood as follows. If all proteins with q-value below a threshold of `r significanceLevel` are selected as differentially expressed, then the expected proportion of false discoveries in the selected group is controlled to be less than the threshold value, in this case 5%.
+
+The B-statistic (lods or B) is the log odds that the protein is differentially expressed. For example, if B = 1.5, the odds of differential expression is $e^{1.5} = 4.48$, i.e, about four and a half to one. The probability that the protein is differentially expressed is $4.48 / (1 + 4.48) = 0.82$. A B-statistic of zero corresponds to a 50-50 chance that the gene is differentially expressed. The B-statistic has been automatically adjusted for multiple testing by assuming that 1% of the proteins are expected to be differentially expressed.
+
+```{r fit_linear_model, include = FALSE}
+
+factors <- c("Group", "Run")
+
+model <- as.formula(paste(c("~ 0", factors), collapse = " + "))
+
+fittedLinearModels <- list()
+fittedLinearModelsExcludingControls <- list()
+
+for (analysis in names(combinedProteinData))
+{
+  cat(analysis, "\n", sep = "")
+  data <- combinedProteinData[[analysis]]
+
+  # log2 transform
+  exprs(data) <- log2(exprs(data))
+
+  design <- model.matrix(model, data = pData(data))
+
+  colnames(design) <- colnames(design) %>%
+    sub(pattern = "^Group", replacement = "") %>%
+    gsub(pattern = " ", replacement = "_")
+
+  fittedLinearModels[[analysis]] <- lmFit(data, design = design)
+
+  samples <- pData(data) %>%
+    rownames_to_column("Sample") %>%
+    filter(Group != controlGroup) %>%
+    select(Sample) %>%
+    unlist(use.names = FALSE)
+
+  data <- data[, sampleNames(data) %in% samples]
+
+  design <- model.matrix(model, data = pData(data))
+
+  colnames(design) <- colnames(design) %>%
+    sub(pattern = "^Group", replacement = "") %>%
+    gsub(pattern = " ", replacement = "_")
+
+  fittedLinearModelsExcludingControls[[analysis]] <- lmFit(data, design = design)
+}
+```
+
+```{r contrasts, include = FALSE}
+
+contrasts <- c(
+  "ER 45min vs ER 0min",
+  "ER 90min vs ER 0min",
+  "ER 90min vs ER 45min",
+  "FOXA1 45min vs FOXA1 0min",
+  "FOXA1 90min vs FOXA1 0min",
+  "FOXA1 90min vs FOXA1 45min"
+)
+
+reformatGroup <- function(x) gsub(x, pattern = " ", replacement = "_")
+
+reformatContrasts <- function(x)
+{
+  x %>%
+    gsub(pattern = " ", replacement = "_") %>%
+    sub(pattern = "_-_", replacement = " - ") %>%
+    sub(pattern = "_vs_", replacement = " - ")
+}
+
+reformattedContrasts <- reformatContrasts(contrasts)
+
+fittedContrasts <- list()
+
+for (analysis in names(combinedProteinData))
+{
+  cat(analysis, "\n", sep = "")
+  fittedLinearModel <- fittedLinearModels[[analysis]]
+  # fittedLinearModel <- fittedLinearModelsExcludingControls[[analysis]]
+  contrastMatrix <- makeContrasts(contrasts = reformattedContrasts, levels = fittedLinearModel$design)
+  fittedContrasts[[analysis]] <- contrasts.fit(fittedLinearModel, contrastMatrix)
+  fittedContrasts[[analysis]] <- eBayes(fittedContrasts[[analysis]], trend = TRUE, robust = TRUE)
+}
+```
+
+```{r create_contrast_results, include = FALSE}
+
+createContrastResults <- function(
+  msnset,
+  fittedLinearModel,
+  fittedLinearModelExcludingControls,
+  fittedContrasts,
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+{
+  reformattedContrast <- reformatContrasts(paste(contrastGroups, collapse = " - "))
+  reformattedContrastGroups <- reformattedContrast %>% strsplit(" - ") %>% unlist
+  reformatedControlGroup <- reformatGroup(controlGroup)
+
+  results <- topTable(fittedContrasts, coef = reformattedContrast, number = Inf, sort.by = "none")
+
+  fittedIntensities <- as.data.frame(fittedLinearModel$coefficients)
+  # fittedIntensities <- as.data.frame(fittedLinearModelExcludingControls$coefficients)
+  contrastFittedIntensities <- select(fittedIntensities, one_of(reformattedContrastGroups))
+  results$logFC <- contrastFittedIntensities[, 1] - contrastFittedIntensities[, 2]
+
+  fittedIntensities <- as.data.frame(fittedLinearModel$coefficients)
+  contrastFittedIntensities <- select(fittedIntensities, one_of(reformattedContrastGroups))
+  controlFittedIntensities <- fittedIntensities[, reformatedControlGroup]
+  results$logFCcontrol = apply(contrastFittedIntensities - controlFittedIntensities, 1, max)
+
+  samples <- pData(msnset) %>%
+    mutate(Sample = rownames(.)) %>%
+    filter(Group %in% c(contrastGroups, controlGroup)) %>%
+    select(Sample) %>%
+    unlist(use.names = FALSE)
+
+  intensities <- exprs(msnset) %>%
+    as.data.frame %>%
+    select(one_of(samples))
+
+  # add N column for the number of replicates, i.e. runs where intensity
+  # is not NA for both groups
+  n <- rep(0, nrow(intensities))
+  for (run in runs)
+  {
+    samples <- pData(msnset) %>%
+      mutate(Sample = rownames(.)) %>%
+      filter(Group %in% contrastGroups) %>%
+      filter(Run == run) %>%
+      select(Sample) %>%
+      unlist(use.names = FALSE)
+    n <- n +
+      intensities %>%
+      select(one_of(samples)) %>%
+      transmute(n = ifelse(complete.cases(.), 1, 0)) %>%
+      unlist(use.names = FALSE)
+  }
+
+  results <- results %>%
+    mutate(N = n) %>%
+    bind_cols(fittedIntensities %>% select(one_of(rev(reformattedContrastGroups), controlGroup))) %>%
+    bind_cols(intensities) %>%
+    left_join(proteinInfo, by = "Protein")
+
+  results <- bind_cols(
+    results %>% select(Protein, Gene, Description, N),
+    results %>% select(-Protein, -Gene, -Description, -N)
+  )
+
+  results 
+}
+
+```
+
+The IgG control was used to assess non-specific binding. The binding of a protein is considered to be non-specific if the log~2~ fold change relative to the IgG control is less than `r controlLogFoldChangeThreshold`. In the differential binding analysis, protein intensity values are fitted to a linear model and the fitted values for each condition being compared are also compared to the IgG control. For each comparison of two groups, the maximum log~2~ fold change from each of the two groups above the IgG control is used to determine if the binding is specific.
+
+\newpage
+
+```{r contrast_1, include = FALSE}
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "excluding peptides with missing intensities, no normalization"
+analysis <- "ExcludeMissingValues_NoNormalization"
+```
+
+## `r paste(contrastName, processingDescription, sep = ", ")`
+
+```{r results_1, include = FALSE}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+```
+
+```{r ma_plot_1, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("MA plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(maPlot(results,
+             significanceLevel = significanceLevel,
+             controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+             minLogFoldChangeForLabelling = 1.5,
+             maxNumberLabelledProteins = 20,
+             pointSize = 1.5))
+```
+
+```{r volcano_plot_1, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Volcano plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(volcanoPlot(results,
+                  significanceLevel = significanceLevel,
+                  minLogFoldChange = -2.0,
+                  maxLogFoldChange = 2.75,
+                  controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+                  minLogFoldChangeForLabelling = 1.5,
+                  maxNumberLabelledProteins = 20,
+                  pointSize = 1.5))
+```
+
+```{r pvalue_histogram_1, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Histogram of p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=3.5, fig.width=4.5}
+print(histogram(results, "P.Value", xlab = "p-value"))
+```
+
+```{r qq_plot_1, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("QQ plot of the adjusted p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=5, fig.width=5}
+q <- results %>%
+  select(adj.P.Val) %>%
+  filter(!is.na(adj.P.Val)) %>%
+  arrange(adj.P.Val) %>%
+  unlist %>%
+  as.numeric
+qqplot(-log10(ppoints(length(q))),
+       -log10(q),
+       xlab=expression(Expected~~-log[10](italic(q))),
+       ylab=expression(Observed~~-log[10](italic(q))))
+abline(0, 1, col = "red")
+```
+
+\newpage
+
+```{r contrast_2, include = FALSE}
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "excluding peptides with missing intensities, quantile normalization"
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+```
+
+## `r paste(contrastName, processingDescription, sep = ", ")`
+
+```{r results_2, include = FALSE}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+```
+
+```{r ma_plot_2, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("MA plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(maPlot(results,
+             significanceLevel = significanceLevel,
+             controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+             minLogFoldChangeForLabelling = 1.5,
+             maxNumberLabelledProteins = 50,
+             pointSize = 1.5))
+```
+
+```{r volcano_plot_2, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Volcano plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(volcanoPlot(results,
+                  significanceLevel = significanceLevel,
+                  minLogFoldChange = -2.0,
+                  maxLogFoldChange = 2.75,
+                  controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+                  minLogFoldChangeForLabelling = 1.5,
+                  maxNumberLabelledProteins = 50,
+                  pointSize = 1.5))
+```
+
+```{r pvalue_histogram_2, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Histogram of p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=3.5, fig.width=4.5}
+print(histogram(results, "P.Value", xlab = "p-value"))
+```
+
+```{r qq_plot_2, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("QQ plot of the adjusted p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=5, fig.width=5}
+q <- results %>%
+  select(adj.P.Val) %>%
+  filter(!is.na(adj.P.Val)) %>%
+  arrange(adj.P.Val) %>%
+  unlist %>%
+  as.numeric
+qqplot(-log10(ppoints(length(q))),
+       -log10(q),
+       xlab=expression(Expected~~-log[10](italic(q))),
+       ylab=expression(Observed~~-log[10](italic(q))))
+abline(0, 1, col = "red")
+```
+
+\newpage
+
+```{r contrast_3, include = FALSE}
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "excluding peptides with missing intensities, quantile normalization excluding IgG control"
+analysis <- "ExcludeMissingValues_QuantileNormalizationExcludingIgG"
+```
+
+## `r paste(contrastName, processingDescription, sep = ", ")`
+
+```{r results_3, include = FALSE}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+```
+
+```{r ma_plot_3, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("MA plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(maPlot(results,
+             significanceLevel = significanceLevel,
+             controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+             minLogFoldChangeForLabelling = 1.5,
+             maxNumberLabelledProteins = 50,
+             pointSize = 1.5))
+```
+
+```{r volcano_plot_3, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Volcano plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(volcanoPlot(results,
+                  significanceLevel = significanceLevel,
+                  minLogFoldChange = -2.0,
+                  maxLogFoldChange = 2.75,
+                  controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+                  minLogFoldChangeForLabelling = 1.5,
+                  maxNumberLabelledProteins = 50,
+                  pointSize = 1.5))
+```
+
+```{r pvalue_histogram_3, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Histogram of p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=3.5, fig.width=4.5}
+print(histogram(results, "P.Value", xlab = "p-value"))
+```
+
+```{r qq_plot_3, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("QQ plot of the adjusted p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=5, fig.width=5}
+q <- results %>%
+  select(adj.P.Val) %>%
+  filter(!is.na(adj.P.Val)) %>%
+  arrange(adj.P.Val) %>%
+  unlist %>%
+  as.numeric
+qqplot(-log10(ppoints(length(q))),
+       -log10(q),
+       xlab=expression(Expected~~-log[10](italic(q))),
+       ylab=expression(Observed~~-log[10](italic(q))))
+abline(0, 1, col = "red")
+```
+
+\newpage
+
+```{r contrast_4, include = FALSE}
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "excluding peptides with missing intensities, scale normalization"
+analysis <- "ExcludeMissingValues_ScaleNormalization"
+```
+
+## `r paste(contrastName, processingDescription, sep = ", ")`
+
+```{r results_4, include = FALSE}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+```
+
+```{r ma_plot_4, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("MA plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(maPlot(results,
+             significanceLevel = significanceLevel,
+             controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+             minLogFoldChangeForLabelling = 1.5,
+             maxNumberLabelledProteins = 50,
+             pointSize = 1.5))
+```
+
+```{r volcano_plot_4, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Volcano plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(volcanoPlot(results,
+                  significanceLevel = significanceLevel,
+                  minLogFoldChange = -2.0,
+                  maxLogFoldChange = 2.75,
+                  controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+                  minLogFoldChangeForLabelling = 1.5,
+                  maxNumberLabelledProteins = 50,
+                  pointSize = 1.5))
+```
+
+```{r pvalue_histogram_4, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Histogram of p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=3.5, fig.width=4.5}
+print(histogram(results, "P.Value", xlab = "p-value"))
+```
+
+```{r qq_plot_4, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("QQ plot of the adjusted p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=5, fig.width=5}
+q <- results %>%
+  select(adj.P.Val) %>%
+  filter(!is.na(adj.P.Val)) %>%
+  arrange(adj.P.Val) %>%
+  unlist %>%
+  as.numeric
+qqplot(-log10(ppoints(length(q))),
+       -log10(q),
+       xlab=expression(Expected~~-log[10](italic(q))),
+       ylab=expression(Observed~~-log[10](italic(q))))
+abline(0, 1, col = "red")
+```
+
+\newpage
+
+```{r contrast_5, include = FALSE}
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- paste("excluding peptides with missing intensities, scale normalization using top", numberOfPeptidesWithHighestIgG, "IgG peptides")
+analysis <- "ExcludeMissingValues_ScaleNormalizationTopIgG"
+```
+
+## `r paste(contrastName, processingDescription, sep = ", ")`
+
+```{r results_5, include = FALSE}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+```
+
+```{r ma_plot_5, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("MA plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(maPlot(results,
+             significanceLevel = significanceLevel,
+             controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+             minLogFoldChangeForLabelling = 1.5,
+             maxNumberLabelledProteins = 50,
+             pointSize = 1.5))
+```
+
+```{r volcano_plot_5, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Volcano plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(volcanoPlot(results,
+                  significanceLevel = significanceLevel,
+                  minLogFoldChange = -2.0,
+                  maxLogFoldChange = 2.75,
+                  controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+                  minLogFoldChangeForLabelling = 1.5,
+                  maxNumberLabelledProteins = 50,
+                  pointSize = 1.5))
+```
+
+```{r pvalue_histogram_5, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Histogram of p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=3.5, fig.width=4.5}
+print(histogram(results, "P.Value", xlab = "p-value"))
+```
+
+```{r qq_plot_5, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("QQ plot of the adjusted p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=5, fig.width=5}
+q <- results %>%
+  select(adj.P.Val) %>%
+  filter(!is.na(adj.P.Val)) %>%
+  arrange(adj.P.Val) %>%
+  unlist %>%
+  as.numeric
+qqplot(-log10(ppoints(length(q))),
+       -log10(q),
+       xlab=expression(Expected~~-log[10](italic(q))),
+       ylab=expression(Observed~~-log[10](italic(q))))
+abline(0, 1, col = "red")
+```
+
+\newpage
+
+```{r contrast_6, include = FALSE}
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "KNN nearest neighbour averaging imputation of missing values, quantile normalization"
+analysis <- "ImputeKNN_QuantileNormalization"
+```
+
+## `r paste(contrastName, processingDescription, sep = ", ")`
+
+```{r results_6, include = FALSE}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+```
+
+```{r ma_plot_6, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("MA plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(maPlot(results,
+             significanceLevel = significanceLevel,
+             controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+             minLogFoldChangeForLabelling = 1.5,
+             maxNumberLabelledProteins = 50,
+             pointSize = 1.5))
+```
+
+```{r volcano_plot_6, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Volcano plot of the average intensity against log~2~ fold change for the ", contrastName, " comparison (", processingDescription, "). Top ranking differentially-expressed proteins with false discovery rate below 0.05 are highlighted in pink. Open circles indicate that the protein is non-specific from the IgG control comparison.", sep = ""), fig.height=6}
+print(volcanoPlot(results,
+                  significanceLevel = significanceLevel,
+                  minLogFoldChange = -2.0,
+                  maxLogFoldChange = 2.75,
+                  controlLogFoldChangeThreshold = controlLogFoldChangeThreshold,
+                  minLogFoldChangeForLabelling = 1.5,
+                  maxNumberLabelledProteins = 50,
+                  pointSize = 1.5))
+```
+
+```{r pvalue_histogram_6, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Histogram of p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=3.5, fig.width=4.5}
+print(histogram(results, "P.Value", xlab = "p-value"))
+```
+
+```{r qq_plot_6, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("QQ plot of the adjusted p-values for the ", contrastName, " comparison (", processingDescription, ")", sep = ""), fig.height=5, fig.width=5}
+q <- results %>%
+  select(adj.P.Val) %>%
+  filter(!is.na(adj.P.Val)) %>%
+  arrange(adj.P.Val) %>%
+  unlist %>%
+  as.numeric
+qqplot(-log10(ppoints(length(q))),
+       -log10(q),
+       xlab=expression(Expected~~-log[10](italic(q))),
+       ylab=expression(Observed~~-log[10](italic(q))))
+abline(0, 1, col = "red")
+```
+
+
+\newpage
+
+# Comparison of differential binding analysis approaches
+
+In this section, comparisons of the differential binding results obtained using differing methods for handling missing values and varying normalization techniques are presented. The B-statistic (log odds) is used to rank the proteins from most significantly differentially expressed to least significant. Scatter plots of both the B-statistic generated for the two methods being compared and the rank are presented. The protein with the highest B-statistic, i.e. the most significantly differentially expressed protein, is given a rank of 1.
+
+Differing imputation methods have relatively little effect on the results for most proteins. This is largely because only a small proportion of the proteins have peptide-level measurements containing missing values. There are a few proteins that are only represented in the differential binding results when imputation is carried out, for which all peptide-level measurements contain missing values. These proteins are not represented in the comparions with the analysis in which measurements with missing values are removed.
+
+Different normalization approaches have a more substantial impact on the differential binding analysis.
+
+\newpage
+
+## Removal of missing values vs KNN imputation (quantile normalization in both)
+
+```{r exclude_missing_vs_knn_imputation, include = FALSE}
+
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+results1 <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+analysis <- "ImputeKNN_QuantileNormalization"
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+results2 <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+results <- inner_join(
+  results1 %>% select(Protein, B1 = B),
+  results2 %>% select(Protein, B2 = B),
+  by = "Protein"
+  ) %>%
+  filter(complete.cases(.)) %>%
+  mutate(rank1 = rank(-B1), rank2 = rank(-B2))
+```
+
+```{r exclude_missing_vs_knn_imputation_B_plot, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Plot of B-statistic (log odds) for differential expression of proteins for the ", contrastName, " contrast, comparing results following exclusion of missing values and KNN imputation.", sep = ""), fig.height=2.9, fig.width=3.5}
+print(scatterPlot(results, "B1", "B2", "B-statistic (excluding missing values)", "B-statistic (KNN imputation)"))
+```
+
+```{r exclude_missing_vs_knn_imputation_rank_plot, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Plot of the rank of differentially-expressed proteins for the ", contrastName, " contrast, comparing results following exclusion of missing values and KNN imputation.", sep = ""), fig.height=2.9, fig.width=3.5}
+print(scatterPlot(results, "rank1", "rank2", "Rank (excluding missing values)", "Rank (KNN imputation)"))
+```
+
+\newpage
+
+## Removal of missing values vs lowest value imputation (quantile normalization in both)
+
+```{r exclude_missing_vs_min_imputation, include = FALSE}
+
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+results1 <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+analysis <- "ImputeMin_QuantileNormalization"
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+results2 <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+results <- inner_join(
+  results1 %>% select(Protein, B1 = B),
+  results2 %>% select(Protein, B2 = B),
+  by = "Protein"
+  ) %>%
+  filter(complete.cases(.)) %>%
+  mutate(rank1 = rank(-B1), rank2 = rank(-B2))
+```
+
+```{r exclude_missing_vs_min_imputation_B_plot, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Plot of B-statistic (log odds) for differential expression of proteins for the ", contrastName, " contrast, comparing results following exclusion of missing values and lowest value imputation.", sep = ""), fig.height=2.9, fig.width=3.5}
+print(scatterPlot(results, "B1", "B2", "B-statistic (excluding missing values)", "B-statistic (lowest value imputation)"))
+```
+
+```{r exclude_missing_vs_min_imputation_rank_plot, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Plot of the rank of differentially-expressed proteins for the ", contrastName, " contrast, comparing results following exclusion of missing values and lowest value imputation.", sep = ""), fig.height=2.9, fig.width=3.5}
+print(scatterPlot(results, "rank1", "rank2", "Rank (excluding missing values)", "Rank (lowest value imputation)"))
+```
+
+\newpage
+
+## Quantile vs Scale normalization (missing values excluded in both)
+
+```{r quantile_vs_scale_normalization, include = FALSE}
+
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+results1 <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+analysis <- "ExcludeMissingValues_ScaleNormalization"
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+results2 <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+results <- inner_join(
+  results1 %>% select(Protein, B1 = B),
+  results2 %>% select(Protein, B2 = B),
+  by = "Protein"
+  ) %>%
+  filter(complete.cases(.)) %>%
+  mutate(rank1 = rank(-B1), rank2 = rank(-B2))
+```
+
+```{r scale_vs_quantile_normalization_B_plot, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Plot of B-statistic (log odds) for differential expression of proteins for the ", contrastName, " contrast, comparing results following quantile and scale normalization.", sep = ""), fig.height=2.9, fig.width=3.5}
+print(scatterPlot(results, "B1", "B2", "B-statistic (quantile normalization)", "B-statistic (scale normalization)"))
+```
+
+```{r scale_vs_quantile_normalization_rank_plot, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Plot of the rank of differentially-expressed proteins for the ", contrastName, " contrast, comparing results following quantile and scale normalization.", sep = ""), fig.height=2.9, fig.width=3.5}
+print(scatterPlot(results, "rank1", "rank2", "Rank (quantile normalization)", "Rank (scale normalization)"))
+```
+
+\newpage
+
+## Scale normalization based on all peptides vs peptides with highest IgG intensities (missing values excluded in both)
+
+```{r scale_normalization_all_vs_topIgG, include = FALSE}
+
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+
+analysis <- "ExcludeMissingValues_ScaleNormalization"
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+results1 <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+analysis <- "ExcludeMissingValues_ScaleNormalizationTopIgG"
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+results2 <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+results <- inner_join(
+  results1 %>% select(Protein, B1 = B),
+  results2 %>% select(Protein, B2 = B),
+  by = "Protein"
+  ) %>%
+  filter(complete.cases(.)) %>%
+  mutate(rank1 = rank(-B1), rank2 = rank(-B2))
+```
+
+```{r scale_normalization_all_vs_topIgG_B_plot, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Plot of B-statistic (log odds) for differential expression of proteins for the ", contrastName, " contrast, comparing results following scale normalization based on all peptides and those with the highest IgG intensities.", sep = ""), fig.height=2.5, fig.width=3.5}
+print(scatterPlot(results, "B1", "B2", "B-statistic (scale normalization based on all peptides)", "B-statistic (scale normalization, peptides with highest IgG)"))
+```
+
+```{r scale_normalization_all_vs_topIgG_rank_plot, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=paste("Plot of the rank of differentially-expressed proteins for the ", contrastName, " contrast, comparing results following scale normalization based on all peptides and those with the highest IgG intensities.", sep = ""), fig.height=2.5, fig.width=3.5}
+print(scatterPlot(results, "rank1", "rank2", "Rank (scale normalization based on all peptides)", "Rank (scale normalization, peptides with highest IgG)"))
+```
+
+\newpage
+
+
+# Comparisoin of variance between specfic and non-specific binding
+
+```{r  echo=FALSE, warning=FALSE, message=FALSE}
+
+maPlot <- function(differentialExpressionResults, selectedGenes = NULL,
+                   xlab = expression(average~log[2](intensity)),
+                   ylab = expression(log[2](fold~change)),
+                   significanceLevel = 0.05,
+                   minLogFoldChangeForLabelling = 1.5,
+                   maxNumberLabelledProteins = 50,
+                   controlLogFoldChangeThreshold = -Inf,
+                   pointSize = 2.5) {
+  if (!"logFCcontrol" %in% colnames(differentialExpressionResults))
+    differentialExpressionResults$logFCcontrol <- Inf
+
+  differentialExpressionResults$group <-
+    ifelse(differentialExpressionResults$Gene %in% selectedGenes, 0,
+    ifelse(!is.na(differentialExpressionResults$adj.P.Val) & differentialExpressionResults$adj.P.Val <= significanceLevel & differentialExpressionResults$logFCcontrol >= controlLogFoldChangeThreshold, 1,
+    ifelse(!is.na(differentialExpressionResults$adj.P.Val) & differentialExpressionResults$adj.P.Val <= significanceLevel, 2,
+    ifelse(abs(differentialExpressionResults$logFC) >= minLogFoldChangeForLabelling & differentialExpressionResults$logFCcontrol >= controlLogFoldChangeThreshold, 3,
+    ifelse(abs(differentialExpressionResults$logFC) >= minLogFoldChangeForLabelling, 4,
+    ifelse(differentialExpressionResults$logFCcontrol >= controlLogFoldChangeThreshold, 5, 6))))))
+
+  # 0 - selected
+  # 1 - significant, specific
+  # 2 - significant, non-specific
+  # 3 - non-significant, large logfc, specific
+  # 4 - non-significant, large logfc, non-specific
+  # 5 - specific
+  # 6 - non-specific
+
+  differentialExpressionResults <- differentialExpressionResults %>% arrange(desc(group))
+
+  differentialExpressionResults$group <- factor(differentialExpressionResults$group, 0:6)
+
+  differentialExpressionResults <- differentialExpressionResults %>%
+    mutate(label = paste(" ", Gene)) %>%
+    mutate(logFCcontrolAlpha = pmin(logFCcontrol, 2.0))
+
+  labelSubset <- bind_rows(
+    differentialExpressionResults %>%
+      filter(group != 0 & adj.P.Val <= significanceLevel) %>%
+      arrange(desc(abs(logFC))) %>%
+      slice(1:(maxNumberLabelledProteins / 2)),
+    differentialExpressionResults %>%
+      filter(group != 0 & abs(logFC) >= minLogFoldChangeForLabelling) %>%
+      arrange(desc(abs(logFC))) %>%
+      slice(1:maxNumberLabelledProteins)
+  ) %>%
+    unique %>%
+    slice(1:maxNumberLabelledProteins)
+
+
+  
+    if (maxNumberLabelledProteins == 0) labelSubset <- labelSubset %>% slice(0)
+ 
+  # plot <- ggplot(differentialExpressionResults, aes(x = AveExpr, y = logFC, colour = group, size = group, shape = group, alpha = logFCcontrolAlpha))
+  plot <- ggplot(differentialExpressionResults, aes(x = AveExpr, y = logFC, colour = group))+ coord_cartesian(ylim = c(-3.5,3.5))
+  plot <- plot + geom_hline(yintercept = 0, color="gray50", size = 0.5)
+  plot <- plot + geom_point(alpha=0.75)
+  plot <- plot + geom_text(data = labelSubset, aes(label = label), hjust = 0, size = 3.5)
+  plot <- plot + geom_point(data = subset(differentialExpressionResults, group == 0), alpha = 0.7)
+  plot <- plot + geom_text(data = subset(differentialExpressionResults, group == 0), aes(label = label), hjust = 0, size = 4.0, alpha = 1)
+  plot <- plot + scale_colour_manual(values = c("green", "red", "blue", "red", "blue", "red", "blue"), drop = FALSE)
+  # plot <- plot + scale_colour_manual(values = c("blue", "deeppink3", "deeppink3", "gray50", "gray50", "gray50", "gray50"), drop = FALSE)
+  # plot <- plot + scale_size_manual(values = c(1.2 * pointSize, pointSize, pointSize, 0.8 * pointSize, 0.8 * pointSize, 0.6 * pointSize, 0.6 * pointSize), drop = FALSE)
+  # plot <- plot + scale_shape_manual(values = c(16, 16, 1, 16, 1, 16, 1), drop = FALSE)
+  #plot <- plot + scale_alpha(range = c(0.2, 1.0))
+  plot <- plot + xlab(xlab)
+  plot <- plot + ylab(ylab)
+  plot <- plot + theme_bw()
+  plot <- plot + theme(
+    text = element_text(size = 14),
+    legend.position = "none"
+  )
+
+  save(differentialExpressionResults,file="Results/QRIME.RData") 
+  return(plot)
+}
+
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  c("ER 45min", "ER 0min"),
+  controlGroup,
+  proteinInfo)
+
+
+```
+
+```{r MA_specificVsNonSpecfic, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="MA plot showing the distribution of non-specific binding. Non-specific binding was identified as proteins that showed less than a log2 enrichment over the IgG channel at either 0 or 45 minutes. The majority of non-specific binding (blue) is found to show less change between time points whereas the specific interactions (red) shows a broader distribution.", fig.height=2.5, fig.width=3.5}
+
+print(maPlot(results,
+             significanceLevel = 0.5,
+             controlLogFoldChangeThreshold = 1.0,
+             minLogFoldChangeForLabelling = 1.5,
+             maxNumberLabelledProteins = 0,
+             pointSize = 1.5))
+```
+
+```{r  echo=FALSE, warning=FALSE, message=FALSE}
+
+load("Results/QRIME.RData")
+as.numeric(differentialExpressionResults$group)%%2->differentialExpressionResults$group
+
+tmp<-differentialExpressionResults
+
+```
+
+```{r density_specificVsNonSpecfici, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Density plot right showing the distribution of non-specific binding. Non-specific binding was identified as proteins that showed less than a log2 enrichment over the IgG channel at either 0 or 45 minutes. The majority of non-specific binding (blue) is found to show less change between time points whereas the specific interactions (red) shows a broader distribution.", fig.height=3.5, fig.width=4.5}
+
+plot(density(tmp$logFC[tmp$group==1]),col="blue",ylab="Density", xlab="Fold Change", main="", xlim=c(3,-3), lwd=2)
+lines(density(tmp$logFC[tmp$group==0]),col="red",lwd=2)
+
+```
+
+```{r box_specificVsNonSpecfici, echo=FALSE, warning=FALSE, message=FALSE, fig.cap=" Box plot showing the variance of non-specific vs non-specific binding. Non-specific binding was identified as proteins that showed less than a log2 enrichment over the IgG channel at either 0 or 45 minutes. The the variance of the log fold changes for the non-specific binding interactions was significantly less than that of the specific interactions (F-test, one-sided, p-value < 2.2e*-16).", fig.height=3.5, fig.width=4.5}
+
+boxplot(tmp$logFC[tmp$group==1],tmp$logFC[tmp$group==0],ylab="Fold Change", names=c("Non-specific","Specific"), col=c("#0000FFAA","#FF0000AA"))
+
+```
+
+```{r  echo=FALSE, warning=FALSE, message=FALSE}
+
+var.test(tmp$logFC[tmp$group==1],tmp$logFC[tmp$group==0], alternative="less")
+
+
+
+```
+
+
+\newpage
+
+
+# Differential binding results tables
+
+```{r contrast_results_thresholds, include = FALSE}
+significanceLevel <- 0.05
+logFoldChangeThreshold <- 1.0
+controlLogFoldChangeThreshold <- 1.0
+```
+
+The following tables contain the top ranking differentially expressed proteins for each comparison. Included are all proteins that reach a statistical signficance of `r significanceLevel` in terms of the adjusted p-value and those with an absolute log~2~ fold change of `r logFoldChangeThreshold` or above.
+
+The IgG column gives the larger of the log~2~ fold changes for the two groups against the IgG control and an asterisk indicates specific binding where this log~2~ fold change is above a threshold of `r controlLogFoldChangeThreshold`. N is the number of replicates in which the protein was observed.
+
+In all cases, peptide intensities were quantile normalized and measurements with missing values were removed prior to summarization at the protein level.
+
+```{r contrast_results_table, include = FALSE}
+
+contrastResultsTable <- function(results, contrastName,
+                                 significanceLevel = 0.05,
+                                 logFoldChangeThreshold = 1.0,
+                                 controlLogFoldChangeThreshold = 1.0)
+{
+  resultsTable <- results %>%
+    select(Protein, Gene, N, logFC, AveExpr, adj.P.Val, B, logFCcontrol)
+
+  resultsTable$Specific <- ifelse(resultsTable$logFCcontrol >= controlLogFoldChangeThreshold, "*", "")
+
+  resultsTable <- resultsTable %>%
+    filter(adj.P.Val < 0.05 | abs(logFC) >= 1.0) %>%
+    arrange(desc(abs(logFC)))
+
+  colnames(resultsTable) <- c("Protein", "Gene", "N", "log2FC", "Avg Expr", "p-value", "B", "IgG", "")
+
+  print(
+    xtable(
+      resultsTable,
+      align = "lllrrrrrrl",
+      display = c("d", "s", "s", "d", "f", "f", "g", "f", "f", "s"),
+      caption = paste("Top ranking differentially expressed proteins from the", contrastName, "comparison,  sorted by log2 fold change.")
+    ),
+    include.rownames = FALSE,
+    tabular.environment = "longtable",
+    floating = FALSE,
+    add.to.row = addtorow
+  )
+}
+```
+
+\newpage
+
+```{r results_table_contrast_1_config, include = FALSE}
+contrastGroups <- c("ER 45min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "excluding peptides with missing intensities, quantile normalization"
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+```
+
+## `r contrastName`
+
+```{r results_table_contrast_1, echo=FALSE, warning=FALSE, message=FALSE, results='asis'}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+contrastResultsTable(results, contrastName,
+                     significanceLevel = 0.05,
+                     logFoldChangeThreshold = 1.0,
+                     controlLogFoldChangeThreshold = 1.0)
+
+resultsFile <- paste("Results/", paste(gsub(" ", "_", contrastGroups), collapse = "_vs_"), analysis, ".txt", sep = "")
+write.table(results, resultsFile, sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+\newpage
+
+```{r results_table_contrast_2_config, include = FALSE}
+contrastGroups <- c("ER 90min", "ER 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "excluding peptides with missing intensities, quantile normalization"
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+```
+
+## `r contrastName`
+
+```{r results_table_contrast_2, echo=FALSE, warning=FALSE, message=FALSE, results='asis'}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+contrastResultsTable(results, contrastName,
+                     significanceLevel = 0.05,
+                     logFoldChangeThreshold = 1.0,
+                     controlLogFoldChangeThreshold = 1.0)
+
+resultsFile <- paste("Results/",paste(gsub(" ", "_", contrastGroups), collapse = "_vs_"), analysis, ".txt", sep = "")
+write.table(results, resultsFile, sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+\newpage
+
+```{r results_table_contrast_3_config, include = FALSE}
+contrastGroups <- c("ER 90min", "ER 45min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "excluding peptides with missing intensities, quantile normalization"
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+```
+
+## `r contrastName`
+
+```{r results_table_contrast_3, echo=FALSE, warning=FALSE, message=FALSE, results='asis'}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+contrastResultsTable(results, contrastName,
+                     significanceLevel = 0.05,
+                     logFoldChangeThreshold = 1.0,
+                     controlLogFoldChangeThreshold = 1.0)
+
+resultsFile <- paste("Results/",paste(gsub(" ", "_", contrastGroups), collapse = "_vs_"), analysis, ".txt", sep = "")
+write.table(results, resultsFile, sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+\newpage
+
+```{r results_table_contrast_4_config, include = FALSE}
+contrastGroups <- c("FOXA1 45min", "FOXA1 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "excluding peptides with missing intensities, quantile normalization"
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+```
+
+## `r contrastName`
+
+```{r results_table_contrast_4, echo=FALSE, warning=FALSE, message=FALSE, results='asis'}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+contrastResultsTable(results, contrastName,
+                     significanceLevel = 0.05,
+                     logFoldChangeThreshold = 1.0,
+                     controlLogFoldChangeThreshold = 1.0)
+
+resultsFile <- paste("Results/",paste(gsub(" ", "_", contrastGroups), collapse = "_vs_"), analysis, ".txt", sep = "")
+write.table(results, resultsFile, sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+\newpage
+
+```{r results_table_contrast_5_config, include = FALSE}
+contrastGroups <- c("FOXA1 90min", "FOXA1 0min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "excluding peptides with missing intensities, quantile normalization"
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+```
+
+## `r contrastName`
+
+```{r results_table_contrast_5, echo=FALSE, warning=FALSE, message=FALSE, results='asis'}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+contrastResultsTable(results, contrastName,
+                     significanceLevel = 0.05,
+                     logFoldChangeThreshold = 1.0,
+                     controlLogFoldChangeThreshold = 1.0)
+
+resultsFile <- paste("Results/",paste(gsub(" ", "_", contrastGroups), collapse = "_vs_"), analysis, ".txt", sep = "")
+write.table(results, resultsFile, sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+\newpage
+
+```{r results_table_contrast_6_config, include = FALSE}
+contrastGroups <- c("FOXA1 90min", "FOXA1 45min")
+contrastName <- paste(contrastGroups, collapse = " vs ")
+processingDescription <- "excluding peptides with missing intensities, quantile normalization"
+analysis <- "ExcludeMissingValues_QuantileNormalization"
+```
+
+## `r contrastName`
+
+```{r results_table_contrast_6, echo=FALSE, warning=FALSE, message=FALSE, results='asis'}
+
+data <- combinedProteinData[[analysis]]
+exprs(data) <- log2(exprs(data))
+
+results <- createContrastResults(
+  data,
+  fittedLinearModels[[analysis]],
+  fittedLinearModelsExcludingControls[[analysis]],
+  fittedContrasts[[analysis]],
+  runs,
+  contrastGroups,
+  controlGroup,
+  proteinInfo)
+
+contrastResultsTable(results, contrastName,
+                     significanceLevel = 0.05,
+                     logFoldChangeThreshold = 1.0,
+                     controlLogFoldChangeThreshold = 1.0)
+
+resultsFile <- paste("Results/", paste(gsub(" ", "_", contrastGroups), collapse = "_vs_"), analysis, ".txt", sep = "")
+write.table(results, resultsFile, sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+
+
+```{r save, eval = TRUE, include = FALSE, cache = FALSE}
+save.image(file = "Results/QRIME.RData")
+```
+
