@@ -1,5 +1,7 @@
 # VULCAN Supplementary
 
+Bioconductor Package https://bioconductor.org/packages/release/bioc/html/vulcan.html
+
 Data to be uploaded to GEO
 
 Manuscript DOI pending
