@@ -15,6 +15,14 @@ cd ChIP-seq_ER/data/
 cat brca-expmat.rda.part1 brca-expmat.rda.part2 > brca-expmat.rda
 ```
 
+- qPLEX Analyser package not found
+
+``
+
+Install the package found in the packages directory.
+
+``
+
 - If you receive this error message: maximal number of DLLs reached... You will need to increase the maximum number of DLL R can load. 
 
 ```
