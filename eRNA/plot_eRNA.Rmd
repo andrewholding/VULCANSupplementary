@@ -1,0 +1,65 @@
+---
+title: "eRNA"
+author: "Andrew Holding"
+date: "1/31/2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r eRNAsetup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Effect of GRHL2 overexpression on eRNA transcription
+
+```{r eRNAlib, message=FALSE, warning=FALSE}
+library("ggpubr")
+```
+
+
+
+```{r oeGRLH2, fig.cap="Effect of Overexpression of GRHL2 on eRNA at E2 responsive binding sites."}
+
+eRNA<-read.csv("txt/eRNA_values.csv")
+
+oe<-eRNA[eRNA$Experiment=="overexpression",]
+
+oe_comparisons <- list( c("Control","GRHL2") )
+oe_p <- ggboxplot(oe, x = "Treatment", y = "eRNA",
+               add = "jitter", color="Treatment",
+               facet.by="Gene", ylab="Relative eRNA levels")
+oe_p <- oe_p + stat_compare_means(comparisons = oe_comparisons,
+                       method = "wilcox.test" ,
+                       paired=TRUE)
+oe_p
+
+
+
+
+```
+
+## Effect of GRHL2 knockdown on eRNA transcription
+
+```{r siGRHL2, fig.cap="Effect of knockdown of GRHL2 on eRNA at E2 responsive binding sites."}
+si<-eRNA[eRNA$Experiment=="knockdown",]
+
+si_comparisons <- list( c("siCtrl","siGRHL2") )
+p <- ggboxplot(si, x = "Treatment", y = "eRNA",
+               add = "jitter", color="Treatment",
+               facet.by="Gene", ylab="Relative eRNA levels")
+p + stat_compare_means(comparisons = si_comparisons,
+                       method = "wilcox.test" ,
+                       paired = TRUE)
+
+```
+
+###siRNA combined test
+```{r wilcoxsiRNA}
+
+wilcox.test(si$eRNA[si$Treatment=='siCtrl'],
+            si$eRNA[si$Treatment=='siGRHL2'],
+            paired=TRUE, alternative="less")
+
+```
+
