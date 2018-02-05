@@ -413,19 +413,29 @@ interect<-intersect(rownames(vobj_results$metabric$mrs),
                        rownames(vobj_results$tcga$mrs))
 plot(-log10(vobj_results$metabric$mrs[interect,"pvalue"]),
      -log10(vobj_results$tcga$mrs[interect,"pvalue"]),
-     pch=20, xlab="Metabric Network Enrichment Score", ylab="TCGA Network Enrichment Score",main="VULCAN analysis of GRHL2 ChIP-Seq")
+     pch=20, xlab="Metabric Network Enrichment Score", ylab="TCGA Network Enrichment Score",main="VULCAN analysis of GRHL2 ChIP-Seq",
+     col="gray"
+     )
 
-filtered<-(log10(vobj_results$metabric$mrs[interect,"pvalue"])^2+log10(vobj_results$tcga$mrs[interect,"pvalue"])^2)>2
+filtered<-(log10(vobj_results$metabric$mrs[interect,"pvalue"])^2+log10(vobj_results$tcga$mrs[interect,"pvalue"])^2)>3
+filtered[c("GATA3","PGR","FOXA1","ESR1","GRHL2")]<-rep(FALSE,5)
+
+points(-log10(vobj_results$metabric$mrs[interect,"pvalue"][filtered]),
+     -log10(vobj_results$tcga$mrs[interect,"pvalue"][filtered]),
+     labels=interect[filtered],cex=1)
 
 text(-log10(vobj_results$metabric$mrs[interect,"pvalue"][filtered]),
      -log10(vobj_results$tcga$mrs[interect,"pvalue"][filtered])-0.1,
-     labels=interect[filtered])
+     labels=interect[filtered],cex=1)
 
 points(-log10(vobj_results$metabric$mrs[interect,"pvalue"][c("GATA3","PGR","FOXA1","ESR1","GRHL2")]),
-       -log10(vobj_results$tcga$mrs[interect,"pvalue"][c("GATA3","PGR","FOXA1","ESR1","GRHL2")]),pch=20,col="red")
-text(-log10(vobj_results$metabric$mrs[interect,"pvalue"][c("GATA3","PGR","FOXA1","ESR1","GRHL2")]),
-     -log10(vobj_results$tcga$mrs[interect,"pvalue"][c("GATA3","PGR","FOXA1","ESR1","GRHL2")])-0.1,col="red",
-     labels=c("GATA3","PGR","FOXA1","ESR1","GRHL2"))
+       -log10(vobj_results$tcga$mrs[interect,"pvalue"][c("GATA3","PGR","FOXA1","ESR1","GRHL2")]),pch=20,col="red",cex=1.5)
+text(-log10(vobj_results$metabric$mrs[interect,"pvalue"][c("FOXA1","ESR1","GRHL2")]),
+     -log10(vobj_results$tcga$mrs[interect,"pvalue"][c("FOXA1","ESR1","GRHL2")])+0.2,col="red",
+     labels=c("FOXA1","ESR1","GRHL2"),cex=1.25,font=2)
+text(-log10(vobj_results$metabric$mrs[interect,"pvalue"][c("GATA3","PGR")])+0.2,
+     -log10(vobj_results$tcga$mrs[interect,"pvalue"][c("GATA3","PGR")]),col="red",
+     labels=c("GATA3","PGR"),cex=1.25,font=2)
 ```
 
 

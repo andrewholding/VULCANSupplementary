@@ -2,7 +2,7 @@
 
 Bioconductor Package https://bioconductor.org/packages/release/bioc/html/vulcan.html
 
-Data to be uploaded to GEO
+Source Data can be found on GEO, GSE109820.
 
 Manuscript DOI pending
 
