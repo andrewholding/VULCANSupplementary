@@ -327,7 +327,7 @@ matplot(t(metabricmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main
 axis(1,at=c(1:3),labels=colnames(metabricmat))
 abline(h=c(0,threshold,-threshold),lty=2)
 matplot(t(t(metabricmat["ESR1",])),type="l",col="red",lty=1,lwd=2,add=TRUE)
-text(3,metabricmat["ESR1",3],label="ESR1",pos=4,cex=0.6,font=2,col="red3")
+text(3,metabricmat["ESR1",3],label="ESR1",pos=4,cex=1,font=2,col="red3")
 mtext("METABRIC network")
 ```
 These TFs can be grouped in classes. For example, TFs whose activity is already significant after 45mins and remains significant at 90 minutes after estradiol treatment can be dubbed **early responders**.
@@ -341,9 +341,9 @@ matplot(t(metabricmat[tfclass,]),type="l",col="red3",lty=1,lwd=2,add=TRUE)
 # Repel a bit
 plabels<-tfclass
 oricoords<-sort(setNames(metabricmat[plabels,3],plabels))
-newcoords<-setNames(seq(min(oricoords),max(oricoords),length.out=length(oricoords)),names(oricoords))
-text(3,newcoords,label=names(oricoords),pos=4,cex=0.6,font=2)
-text(3,newcoords["ESR1"],label="ESR1",pos=4,cex=0.6,font=2,col="red3")
+newcoords<-setNames(seq(min(oricoords)*0.7,max(oricoords),length.out=length(oricoords)),names(oricoords))
+text(3,newcoords,label=names(oricoords),pos=4,cex=0.8,font=2)
+text(3,newcoords["ESR1"],label="ESR1",pos=4,cex=1,font=2,col="red3")
 mtext("METABRIC network")
 ```
 TFs whose *repressed* targets are bound will yield a negative activity score. These **repressed TFs** are symmetrically opposite to early responder TFs.
@@ -357,8 +357,8 @@ matplot(t(metabricmat[tfclass,]),type="l",col="cornflowerblue",lty=1,lwd=2,add=T
 # Repel a bit
 plabels<-c(tfclass,"GRHL2")
 oricoords<-sort(setNames(metabricmat[plabels,3],plabels))
-newcoords<-setNames(seq(min(oricoords),max(oricoords),length.out=length(oricoords)),names(oricoords))
-text(3,newcoords,label=names(oricoords),pos=4,cex=0.6,font=2)
+newcoords<-setNames(seq(min(oricoords),max(oricoords)*0.5,length.out=length(oricoords)),names(oricoords))
+text(3,newcoords,label=names(oricoords),pos=4,cex=0.8,font=2)
 mtext("METABRIC network")
 ```
 Some TFs appear to have their targets bound at 45 minutes, but then unoccupied at 90 minutes. This "updown" behavior is consistent to what observed in previous literature about the cyclic properties of certain components of the ER DNA-binding complex, and therefore we dubbed them **candidate cyclic TFs**.
@@ -373,7 +373,7 @@ matplot(t(metabricmat[tfclass,]),type="l",col="seagreen",lty=1,lwd=2,add=TRUE)
 plabels<-tfclass
 oricoords<-sort(setNames(metabricmat[plabels,3],plabels))
 newcoords<-setNames(seq(min(oricoords),max(oricoords),length.out=length(oricoords)),names(oricoords))
-text(3,newcoords,label=names(oricoords),pos=4,cex=0.6,font=2)
+text(3,newcoords,label=names(oricoords),pos=4,cex=0.8,font=2)
 mtext("METABRIC network")
 ```
 Finally, a category of TFs appear to be activated but at 90 minutes only. We call this category of TFs **late responders**.
@@ -387,8 +387,8 @@ matplot(t(metabricmat[tfclass,]),type="l",col="darkorange",lty=1,lwd=2,add=TRUE)
 # Repel a bit
 plabels<-tfclass
 oricoords<-sort(setNames(metabricmat[plabels,3],plabels))
-newcoords<-setNames(seq(min(oricoords),min(oricoords)*1.2,length.out=length(oricoords)),names(oricoords))
-text(3,newcoords,label=names(oricoords),pos=4,cex=0.6,font=2)
+newcoords<-setNames(seq(min(oricoords)*0.7,min(oricoords)*1.4,length.out=length(oricoords)),names(oricoords))
+text(3,newcoords,label=names(oricoords),pos=4,cex=0.8,font=2)
 mtext("METABRIC network")
 ```
 
