@@ -1,27 +1,31 @@
 ---
-title: "Analysis of the time-dependent response to Estradiol through ChIP-Seq data and the VULCAN package"
+title: Analysis of the time-dependent response to Estradiol through ChIP-Seq data
+  and the VULCAN package
 author: "Federico M. Giorgi"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: 
-  html_document: 
-    fig_caption: yes
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
     fig_height: 8
     fig_width: 8
-    toc: true # turns on table of contents
-    toc_depth: 3  # up to three depths of headings (specified by #, ## and ###)
-    number_sections: true  # if you want number sections at each table header
-    theme: united
     highlight: tango
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 3
+fig_caption: yes
 ---
 
-```{r setup_vulcan, include=FALSE}
+```{r setup, include=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo=TRUE)
 knitr::opts_chunk$set(fig.align="center")
 knitr::opts_chunk$set(fig.path = "rmarkdown_images/")
 par.backup<-par()
 ```
 
-```{r captions, include=FALSE}
+```{r captions, include=FALSE, message=FALSE}
 set.seed(1)
 #Figure and Table Caption Numbering, for HTML do it manually
 captabNo <- 1; capfigNo <- 1;
@@ -35,15 +39,15 @@ captab <- function(x){
 
 #Function to add the Figure Number
 capfig <- function(x){
-  #x <- paste0("Figure S",capfigNo,". ",x)
-  #capfigNo <<- capfigNo + 1
+  x <- paste0("Figure S",capfigNo,". ",x)
+  capfigNo <<- capfigNo + 1
   x
 }
 ```
 
 
 
-## Introduction
+# Introduction
 Vulcan (VirtUaL ChIP-Seq Analysis through Networks) is a pipeline that combines
 ChIP-Seq data and regulatory networks to obtain transcription factors that are
 likely affected by a specific stimulus. In order to do so, our package combines
@@ -70,7 +74,7 @@ to provide candidate coregulators of the response to a given stimulus.
 The analysis is based on identifying differentially bound genes and testing
 their enrichment in the regulon of potential co-regulatory factors.
 
-## Software setup
+# Software setup
 VULCAN is conveniently provided as an R package available from the Bioconductor repository.
 ```{r, message=FALSE, warning=FALSE}
 #source("http://bioconductor.org/biocLite.R")
@@ -109,12 +113,12 @@ s2e<-function(ids){
 
 
 
-## Import ChIP-Seq data using Vulcan
-ChIP-Seq data was generated using a cell line model of ER+ breast cancer, MCF7, at 0’, 45’ and 90’ after stimulation with estradiol. The binding profile of ER at each timepoint was then compared between time points using differential binding analysis. From the temporal comparison ER binding we established four classes of binding pattern: early responders, repressed transcription factors, late responders and candidate cyclic genes.
+# Import ChIP-Seq data using Vulcan
+ChIP-Seq data was generated using a cell line model of ER+ breast cancer, MCF7, at 0’, 45’ and 90’ after stimulation with estradiol. The binding profile of ER at each timepoint was then compared between time points using differential binding analysis. From the temporal comparison ER binding we established four classes of binding pattern: early coactivators, early corepressors, late coactivators and transient coactivators.
 
 The first part of our analysis highlights how to import ChIP-Seq data using the VULCAN adn DiffBind packages, provided alignment files (BAM format) and peak files (BED format) for each of the samples. In our dataset, we have 4 replicates for each time point.
 
-### Initial import
+## Initial import
 VULCAN requires an input sheet file in CSV format describing the samples and the location of the individual input files
 ```{r, message=FALSE, warning=FALSE}
 sheetfile<-"chipseq/holding/sheet.csv"
@@ -128,7 +132,7 @@ if(!file.exists(fname)){
 }
 ```
 
-### Annotation
+## Annotation
 VULCAN identifies the location of each peak in each sample, and according to the selected method, assigns a score to each gene promoter. There are a few methods available.
 
 * \textbf{\textit{sum}}: when multiple peaks are found, sum their contributions
@@ -143,7 +147,7 @@ vobj<-vulcan.annotate(vobj,lborder=-10000,rborder=10000,method="sum")
 ```
 
 
-### Normalization
+## Normalization
 At this step, genes are quantified according to the number of reads that could be associated to their promoters. The algorithms within VULCAN (\textit{viper} and \textit{DESeq2}) require however data to be normalized via Variance-Stabilizing Transformation (Anders and Huber, 2010).
 
 ```{r, message=FALSE, warning=FALSE}
@@ -151,7 +155,7 @@ vobj<-vulcan.normalize(vobj)
 save(vobj,file="results/001_vobj.rda")
 ```
 
-### Dataset Sample Clustering
+## Dataset Sample Clustering
 Here, we show how the samples cluster together using peak raw counts, VST-normalized peak raw counts and peak RPKMs. In the following heatmaps, there are `r nrow(vobj$rawcounts)` rows, one per gene promoter, and 16 columns, one per sample. The sample name indicates the time point in minutes (T0, T45 or T90) and the number of replicate (_1, _2, _3, _4).
 ```{r, fig.cap=capfig('Dataset clustering with Raw Counts'), message=FALSE, warning=FALSE}
 heatmap.2(vobj$rawcounts,scale="row",
@@ -212,7 +216,7 @@ textplot2(pca$x[,p1],pca$x[,p2],new=FALSE,
 grid()
 ```
 
-### MA plots
+## MA plots
 Without changing the format of the input data, we can use the Bioconductor DiffBind package to visualize the amplitude of changes in ER binding between time points. One way to do this is an MA plot, which shows the differences between measurements taken in two groups (e.g. 45' vs 00'), by transforming the promoter peak intensity data onto M (log ratio) and A (mean average) scales.
 
 We will process the data using the DiffBind package and then use the \textit{dba.plotMA} function to visualize the contrasts (which we can extract using the \textit{dba.contrast} function).
@@ -254,9 +258,9 @@ dba.plotMA(dbaobj,contrast=3,method=DBA_DESEQ2)
 ```
 
 
-## Apply a coregulatory network over a ChIP-Seq profile
+# Apply a coregulatory network over a ChIP-Seq profile
 Once the data has been loaded, VULCAN applies a regulatory network over differential binding signatures to define Transcription Factors whose networks are most affected by the treatment. In our analysis, we will be using three different networks generated via ARACNe (Margolin et al., 2006): two are breast cancer-specific and are derived from the TCGA and METABRIC data collection, respectively. A third network is used as a negative control, highlighting regulatory mechanisms derived from the Amyloid Leukemia dataset (TCGA).
-### Loading the input networks and processed data
+## Loading the input networks and processed data
 First, we will load the output from the previous paragraphs (chipseq data annotated and normalized) and the three networks.
 ```{r, message=FALSE, warning=FALSE}
 # Load imported vulcan object
@@ -280,7 +284,7 @@ Accessing the vulcan object /texit{vobj} can give us informations on the sample 
 ```{r, warning=FALSE}
 names(vobj$samples)
 ```
-### Running the core Vulcan function
+## Running the core Vulcan function
 The final Vulcan pipeline step requires three input objects:
 
 * The annotated and normalized chipseq data (/texit{vobj})
@@ -310,10 +314,10 @@ if(!file.exists(fname)){
   load(fname)
 }
 ```
-### Visualize the relative TF activity
+## Visualize the relative TF activity
 Vulcan has now generated activity scores for each Transcription Factor, which specify the global ER binding strength on the promoters of their targets.
 
-#### METABRIC results
+### METABRIC results
 The following line plot shows the relative network activity for every TF at two time points. On the y-axis, the Normalized Enrichment Score of Vulcan is provided. Dashed lines indicate a p=0.05 significance threshold for up- and down-regulation.
 ```{r, fig.cap=capfig("Global TF activity after Estradiol Treatment in MCF7 cells, inferred using the METABRIC network, highlighting the ESR1 TF as an example"), message=FALSE, warning=FALSE,dev.args=list(pointsize=14)}
 threshold<-p2z(0.05)
@@ -327,45 +331,45 @@ matplot(t(metabricmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main
 axis(1,at=c(1:3),labels=colnames(metabricmat))
 abline(h=c(0,threshold,-threshold),lty=2)
 matplot(t(t(metabricmat["ESR1",])),type="l",col="red",lty=1,lwd=2,add=TRUE)
-text(3,metabricmat["ESR1",3],label="ESR1",pos=4,cex=1,font=2,col="red3")
+text(3,metabricmat["ESR1",3],label="ESR1",pos=4,cex=0.6,font=2,col="red3")
 mtext("METABRIC network")
 ```
-These TFs can be grouped in classes. For example, TFs whose activity is already significant after 45mins and remains significant at 90 minutes after estradiol treatment can be dubbed **early responders**.
+These TFs can be grouped in classes. For example, TFs whose activity is already significant after 45mins and remains significant at 90 minutes after estradiol treatment can be dubbed **early coactivators**.
 ```{r, fig.cap=capfig("Global TF activity after Estradiol Treatment in MCF7 cells, inferred using the METABRIC network, highlighting TFs significantly upregulated at 45 minutes and 90 minutes"), message=FALSE, warning=FALSE,dev.args=list(pointsize=14)}
 threshold<-p2z(0.05)
 tfclass<-tfs[metabricmat[,"T45"]>=threshold&metabricmat[,"T90"]>=threshold]
-matplot(t(metabricmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Early responders",xlim=c(1,3.3),ylim=c(0,max(metabricmat)))
+matplot(t(metabricmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Early coactivators",xlim=c(1,3.3),ylim=c(0,max(metabricmat)))
 axis(1,at=c(1:3),labels=colnames(metabricmat))
 abline(h=c(0,threshold,-threshold),lty=2)
 matplot(t(metabricmat[tfclass,]),type="l",col="red3",lty=1,lwd=2,add=TRUE)
 # Repel a bit
 plabels<-tfclass
 oricoords<-sort(setNames(metabricmat[plabels,3],plabels))
-newcoords<-setNames(seq(min(oricoords)*0.7,max(oricoords),length.out=length(oricoords)),names(oricoords))
-text(3,newcoords,label=names(oricoords),pos=4,cex=0.8,font=2)
-text(3,newcoords["ESR1"],label="ESR1",pos=4,cex=1,font=2,col="red3")
+newcoords<-setNames(seq(min(oricoords),max(oricoords),length.out=length(oricoords)),names(oricoords))
+text(3,newcoords,label=names(oricoords),pos=4,cex=0.6,font=2)
+text(3,newcoords["ESR1"],label="ESR1",pos=4,cex=0.6,font=2,col="red3")
 mtext("METABRIC network")
 ```
-TFs whose *repressed* targets are bound will yield a negative activity score. These **repressed TFs** are symmetrically opposite to early responder TFs.
+TFs whose *repressed* targets are bound will yield a negative activity score. These **early corepressors** are symmetrically opposite to early responder TFs.
 ```{r, fig.cap=capfig("Global TF activity after Estradiol Treatment in MCF7 cells, inferred using the METABRIC network, highlighting TFs significantly downregulated at 45 minutes and 90 minutes"), message=FALSE, warning=FALSE,dev.args=list(pointsize=14)}
 threshold<-p2z(0.05)
 tfclass<-tfs[metabricmat[,"T45"]<=-threshold&metabricmat[,"T90"]<=-threshold]
-matplot(t(metabricmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Repressed TFs",xlim=c(1,3.3),ylim=c(min(metabricmat),0))
+matplot(t(metabricmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Early corepressors",xlim=c(1,3.3),ylim=c(min(metabricmat),0))
 axis(1,at=c(1:3),labels=colnames(metabricmat))
 abline(h=c(0,threshold,-threshold),lty=2)
 matplot(t(metabricmat[tfclass,]),type="l",col="cornflowerblue",lty=1,lwd=2,add=TRUE)
 # Repel a bit
 plabels<-c(tfclass,"GRHL2")
 oricoords<-sort(setNames(metabricmat[plabels,3],plabels))
-newcoords<-setNames(seq(min(oricoords),max(oricoords)*0.5,length.out=length(oricoords)),names(oricoords))
-text(3,newcoords,label=names(oricoords),pos=4,cex=0.8,font=2)
+newcoords<-setNames(seq(min(oricoords),max(oricoords),length.out=length(oricoords)),names(oricoords))
+text(3,newcoords,label=names(oricoords),pos=4,cex=0.6,font=2)
 mtext("METABRIC network")
 ```
-Some TFs appear to have their targets bound at 45 minutes, but then unoccupied at 90 minutes. This "updown" behavior is consistent to what observed in previous literature about the cyclic properties of certain components of the ER DNA-binding complex, and therefore we dubbed them **candidate cyclic TFs**.
+Some TFs appear to have their targets bound at 45 minutes, but then unoccupied at 90 minutes. This "updown" behavior is consistent to what observed in previous literature about the cyclic properties of certain components of the ER DNA-binding complex, and therefore we dubbed them **transient coactivators**.
 ```{r, fig.cap=capfig("Global TF activity after Estradiol Treatment in MCF7 cells, inferred using the METABRIC network, highlighting TFs significantly upregulated at 45 minutes but not at 90 minutes"), message=FALSE, warning=FALSE,dev.args=list(pointsize=14)}
 threshold<-p2z(0.05)
 tfclass<-tfs[metabricmat[,"T45"]>=threshold&metabricmat[,"T90"]<=threshold]
-matplot(t(metabricmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Candidate Cyclic TFs",xlim=c(1,3.3),ylim=c(min(metabricmat),max(metabricmat)))
+matplot(t(metabricmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Transient coactivators",xlim=c(1,3.3),ylim=c(min(metabricmat),max(metabricmat)))
 axis(1,at=c(1:3),labels=colnames(metabricmat))
 abline(h=c(0,threshold,-threshold),lty=2)
 matplot(t(metabricmat[tfclass,]),type="l",col="seagreen",lty=1,lwd=2,add=TRUE)
@@ -373,27 +377,27 @@ matplot(t(metabricmat[tfclass,]),type="l",col="seagreen",lty=1,lwd=2,add=TRUE)
 plabels<-tfclass
 oricoords<-sort(setNames(metabricmat[plabels,3],plabels))
 newcoords<-setNames(seq(min(oricoords),max(oricoords),length.out=length(oricoords)),names(oricoords))
-text(3,newcoords,label=names(oricoords),pos=4,cex=0.8,font=2)
+text(3,newcoords,label=names(oricoords),pos=4,cex=0.6,font=2)
 mtext("METABRIC network")
 ```
-Finally, a category of TFs appear to be activated but at 90 minutes only. We call this category of TFs **late responders**.
+Finally, a category of TFs appear to be activated but at 90 minutes only. We call this category of TFs **late coactivators**.
 ```{r, fig.cap=capfig("Global TF activity after Estradiol Treatment in MCF7 cells, inferred using the METABRIC network, highlighting TFs significantly upregulated at 90 minutes but not at 45 minutes"), message=FALSE, warning=FALSE,dev.args=list(pointsize=14)}
 threshold<-p2z(0.05)
 tfclass<-tfs[metabricmat[,"T45"]<=threshold&metabricmat[,"T45"]>0&metabricmat[,"T90"]>=threshold]
-matplot(t(metabricmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Late responders",xlim=c(1,3.3),ylim=c(0,max(metabricmat)))
+matplot(t(metabricmat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Late coactivators",xlim=c(1,3.3),ylim=c(0,max(metabricmat)))
 axis(1,at=c(1:3),labels=colnames(metabricmat))
 abline(h=c(0,threshold,-threshold),lty=2)
 matplot(t(metabricmat[tfclass,]),type="l",col="darkorange",lty=1,lwd=2,add=TRUE)
 # Repel a bit
 plabels<-tfclass
 oricoords<-sort(setNames(metabricmat[plabels,3],plabels))
-newcoords<-setNames(seq(min(oricoords)*0.7,min(oricoords)*1.4,length.out=length(oricoords)),names(oricoords))
-text(3,newcoords,label=names(oricoords),pos=4,cex=0.8,font=2)
+newcoords<-setNames(seq(min(oricoords),min(oricoords)*1.2,length.out=length(oricoords)),names(oricoords))
+text(3,newcoords,label=names(oricoords),pos=4,cex=0.6,font=2)
 mtext("METABRIC network")
 ```
 
 
-#### TCGA results
+### TCGA results
 All the TFs and the four categories of TFs were inferred also using the TCGA network.
 
 ```{r, fig.cap=capfig("Global TF activity after Estradiol Treatment in MCF7 cells, inferred using the TCGA network, highlighting the ESR1 TF as an example"), message=FALSE, warning=FALSE,dev.args=list(pointsize=14)}
@@ -414,7 +418,7 @@ mtext("TCGA network")
 ```{r, fig.cap=capfig("Global TF activity after Estradiol Treatment in MCF7 cells, inferred using the TCGA network, highlighting TFs significantly upregulated at 45 minutes and 90 minutes"), message=FALSE, warning=FALSE,dev.args=list(pointsize=14)}
 threshold<-p2z(0.05)
 tfclass<-tfs[tcgamat[,"T45"]>=threshold&tcgamat[,"T90"]>=threshold]
-matplot(t(tcgamat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Early responders",xlim=c(1,3.3),ylim=c(0,max(tcgamat)))
+matplot(t(tcgamat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Early coactivators",xlim=c(1,3.3),ylim=c(0,max(tcgamat)))
 axis(1,at=c(1:3),labels=colnames(tcgamat))
 abline(h=c(0,threshold,-threshold),lty=2)
 matplot(t(tcgamat[tfclass,]),type="l",col="red3",lty=1,lwd=2,add=TRUE)
@@ -430,7 +434,7 @@ mtext("TCGA network")
 ```{r, fig.cap=capfig("Global TF activity after Estradiol Treatment in MCF7 cells, inferred using the TCGA network, highlighting TFs significantly downregulated at 45 minutes and 90 minutes"), message=FALSE, warning=FALSE,dev.args=list(pointsize=14)}
 threshold<-p2z(0.05)
 tfclass<-tfs[tcgamat[,"T45"]<=-threshold&tcgamat[,"T90"]<=-threshold]
-matplot(t(tcgamat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Repressed TFs",xlim=c(1,3.3),ylim=c(min(tcgamat),0))
+matplot(t(tcgamat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Early corepressors",xlim=c(1,3.3),ylim=c(min(tcgamat),0))
 axis(1,at=c(1:3),labels=colnames(tcgamat))
 abline(h=c(0,threshold,-threshold),lty=2)
 matplot(t(tcgamat[tfclass,]),type="l",col="cornflowerblue",lty=1,lwd=2,add=TRUE)
@@ -445,7 +449,7 @@ mtext("TCGA network")
 ```{r, fig.cap=capfig("Global TF activity after Estradiol Treatment in MCF7 cells, inferred using the TCGA network, highlighting TFs significantly upregulated at 45 minutes but not at 90 minutes"), message=FALSE, warning=FALSE,dev.args=list(pointsize=14)}
 threshold<-p2z(0.05)
 tfclass<-tfs[tcgamat[,"T45"]>=threshold&tcgamat[,"T90"]<=threshold]
-matplot(t(tcgamat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Candidate Cyclic TFs",xlim=c(1,3.3),ylim=c(0,max(tcgamat)))
+matplot(t(tcgamat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Transient coactivators",xlim=c(1,3.3),ylim=c(0,max(tcgamat)))
 axis(1,at=c(1:3),labels=colnames(tcgamat))
 abline(h=c(0,threshold,-threshold),lty=2)
 matplot(t(tcgamat[tfclass,]),type="l",col="seagreen",lty=1,lwd=2,add=TRUE)
@@ -461,7 +465,7 @@ mtext("TCGA network")
 ## Dn-Up TF class
 threshold<-p2z(0.05)
 tfclass<-tfs[tcgamat[,"T45"]<=threshold&tcgamat[,"T45"]>0&tcgamat[,"T90"]>=threshold]
-matplot(t(tcgamat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Late responders",xlim=c(1,3.3),ylim=c(0,max(tcgamat)))
+matplot(t(tcgamat),type="l",col="grey",ylab="VULCAN NES",xaxt="n",lty=1,main="Late coactivators",xlim=c(1,3.3),ylim=c(0,max(tcgamat)))
 axis(1,at=c(1:3),labels=colnames(tcgamat))
 abline(h=c(0,threshold,-threshold),lty=2)
 matplot(t(tcgamat[tfclass,]),type="l",col="darkorange",lty=1,lwd=2,add=TRUE)
@@ -475,7 +479,7 @@ mtext("TCGA network")
 
 
 
-#### Comparing TCGA and METABRIC results
+### Comparing TCGA and METABRIC results
 The following scatterplots compare the activity inferred by VULCAN using two alternative networks, derived from the TCGA and METABRIC breast cancer datasets using ARACNe-AP (Giorgi et al., 2016) with default parameters.
 ```{r, fig.cap=capfig("Comparing TF activities inferred by VULCAN using two different breast cancer dataset-derived networks on the ER 45 minutes signature. PCC indicates the Pearson Correlation Coefficient"), message=FALSE, warning=FALSE,dev.args=list(pointsize=16)}
 common<-intersect(rownames(tcgamat),rownames(metabricmat))
@@ -510,7 +514,7 @@ abline(lm1$coef)
 ```
 
 
-#### Testing with a different context network as a negative control
+### Testing with a different context network as a negative control
 Regulatory networks can be tissue-specific, and so we built a third network using the same parameters as the two breast cancer data-based ones. The third network is built on leukemic samples from the TCGA AML dataset. Our results show a weaker activity for all TFs, which is only weakly correlated to that inferred via the TCGA breast cancer network.
 ```{r, fig.cap=capfig("Comparison between activities inferred through a breast cancer TCGA dataset and the AML dataset. PCC indicates the Pearson Correlation Coefficient"), message=FALSE, warning=FALSE}
 negative_90=vobj_negative_90$mrs[,"NES"]
@@ -553,7 +557,7 @@ par<-par.backup
 ```
 
 
-## Pathway enrichment analysis
+# Pathway enrichment analysis
 In the previous paragraphs we generated signatures of differential binding centered around the peaks extracted by VULCAN using the \textit{vulcan.annotate} function. We apply two methods that assess the enrichment of gene pathways over continuous signatures: GSEA (Subramaniam et al., 2004) and aREA (Alvarez et al., 2016).
 First, we will load the VULCAN object containing our dataset:
 ```{r, message=FALSE, warning=FALSE}
@@ -712,10 +716,10 @@ grid.table(topdn)
 ```
 
 
-## The GRHL2 Transcription Factor
+# The GRHL2 Transcription Factor
 Our analysis shows that the genes repressed by the Transcription Factor GRHL2 are occupied by the ER complex, using both TCGA-derived and METABRIC-derived regulatory models.
 
-### Network similarity between ESR1 and GRHL2
+## Network similarity between ESR1 and GRHL2
 The following analysis highlights, with a Venn Diagram for both the METABRIC and TCGA ARACNe-derived regulatory models, the overlap between the ESR1 (Estrogen Receptor) and GRHL2 networks
 ```{r, fig.cap=capfig("Overlap between ESR1 and GRH2 networks in TCGA (left) and METABRIC (right) networks"), message=FALSE, warning=FALSE}
 # Load networks
@@ -762,7 +766,7 @@ par<-par.backup
 ```
 
 
-### Correlation between ESR1 and GRHL2 expression in breast cancer datasets
+## Correlation between ESR1 and GRHL2 expression in breast cancer datasets
 The following analysis assesses the inverse correlation between GRHL2 and ESR1 expressions in TCGA and METABRIC, and highlights the phenomenon for specific tumor subtypes, according to the PAM50 nomenclature (Perou et al., 2000)
 ```{r, fig.cap=capfig("Correlation between GRHL2 and ESR1 expression in the TCGA breast cancer dataset"), message=FALSE, warning=FALSE}
 # TCGA Color annotation
@@ -815,7 +819,7 @@ legend("bottomright",col=c("red","cyan","blue","yellow","green"),legend=c("Basal
 
 ```
 
-### Enrichment of GRHL2 network for gene pathways
+## Enrichment of GRHL2 network for gene pathways
 In order to analyze the GRHL2 network, we perform a simple hypergeometric test to overlap its targets with all pathways contained in hte manually curated Reactome collection of MsigDB pathways (C2 v5.0).
 ```{r, message=FALSE, warning=FALSE}
 tf<-"GRHL2"
@@ -991,12 +995,12 @@ text(1:4,topn+0.65,cex=0.5,
 par<-par.backup
 ```
 
-## Comparing VULCAN results with other tools and approaches
+# Comparing VULCAN results with other tools and approaches
 Our VULCAN results were obtained using independent gene regulatory models and multiple replicates to generate ER-response signatures. 
 
 
-### VULCAN and qPLEX-RIME
-We set to testing the performance of VULCAN against a complementary experimental approach called qPLEX-RIME (Papachristou et al., under review), which aims at identifyin interactors of ER within the ER-chromatin complex at estrogen-responding promoters. We have QRIME results for MCF7 cells treated with estradiol at both 45 and 90 minutes, the same experimental setup for the VULCAN input dataset.
+## VULCAN and QRIME
+We set to testing the performance of VULCAN against a complementary experimental approach called QRIME (Holding et al., submitted), which aims at identifyin interactors of ER within the ER-chromatin complex at estrogen-responding promoters. We have QRIME results for MCF7 cells treated with estradiol at both 45 and 90 minutes, the same experimental setup for the VULCAN input dataset.
 ```{r qrime, message=FALSE, warning=FALSE}
 # Load imported vulcan object
 load("results/001_vobj.rda")
@@ -1232,7 +1236,7 @@ abline(h=c(-p2z(0.05),p2z(0.05)),lty=3)
 grid()
 ```
 
-### Comparing Mutual Information and Partial Correlation networks
+## Comparing Mutual Information and Partial Correlation networks
 As shown before in literature, partial correlation and mutual information networks are highly similar. While requiring a mutual information network due to the VIPER engine used by the VULCAN pipeline, we set out here to compare Mutual Information networks with partial correlation ones, using different correlation thresholds.
 ```{r pcor, message=FALSE, warning=FALSE}
 filename<-"results/006_comparison1_aracne.rda"
@@ -1329,7 +1333,7 @@ mtext("Number of overlapping edges between Pcor and Aracne",cex=0.8)
 ```
 Finally, we show how the Jaccard Index between partial correlation networks and the ARACNe network is always significantly higher than expected by selecting random network edges.
 ```{r, fig.cap=capfig("Comparing the Jaccard Index between the ARACNe network and Partial correlation networks (indicated as arrows) and random networks (indicated as distributions)"), message=FALSE, warning=FALSE}
-par(mfrow=c(5,3))
+par(mfrow=c(3,5))
 for(i in 1:length(random)){
   dd<-density(random[[i]])
   plot(dd,xlim=c(min(random[[i]]),jis[i]*1.1),main=paste0("r=",rs[i]),xlab="Jaccard Index",lwd=2)
@@ -1339,7 +1343,7 @@ for(i in 1:length(random)){
 
 
 
-### Comparing alternative methods for target enrichment analysis
+## Comparing alternative methods for target enrichment analysis
 We developed three independent methods to compare VULCAN with. The first is common, the second is simple but crude, and the third is also common but too stringent.
 
 ```{r vipercomparison, message=FALSE, warning=FALSE}
@@ -1458,9 +1462,9 @@ if(TRUE){
       targets<-names(network[[tf]]$tfmode)
       ptargets<-psignature[intersect(targets,names(psignature))]
       ptargets<-ptargets
-        frac<-length(ptargets)/length(targets)
-        tfpvalues<-c(tfpvalues,frac)
-        names(tfpvalues)[length(tfpvalues)]<-tf
+      frac<-length(ptargets)/length(targets)
+      tfpvalues<-c(tfpvalues,frac)
+      names(tfpvalues)[length(tfpvalues)]<-tf
     }
     return(tfpvalues)
   }
@@ -1604,7 +1608,7 @@ if(TRUE){
 ```
 
 
-### Comparing VULCAN with online tools
+## Comparing VULCAN with online tools
 We will generate BED files for the peaks, as reported by DiffBind, we will then test the pathway enrichment for each of these peaks using the Great software v3.0.0 (http://bejerano.stanford.edu/great/public/html/), the ChIP-Enrich pipeline (http://chip-enrich.med.umich.edu/) and the ISMARA tool (http://ismara.unibas.ch).
 Parameters for GREAT: defaults (Basal plus extension, 5.0kb upstream, 1.0 kb downstream)
 Parameters for ChIP-Enrich: defaults (Nearest TSS, pathways size<=2000, Biocarta, KEGG, Reactome, TFs).
@@ -1658,7 +1662,7 @@ load_obj <- function(f){
   env[[nm]]
 }
 contrasts<-c("45","90")
-par(mfrow=c(2,1))
+par(mfrow=c(1,2))
 for(c in contrasts){
   # Our REA pathways
   nes.tpathways<-load_obj(paste0("results/003_pathwayComparison_REA_",c,".rda")) # results_rea_45
@@ -1693,7 +1697,7 @@ par(mfrow=c(1,1))
 ### TF and Pathway Comparison: VULCAN vs. ChIP enrich
 load("results/002_vobj_networks.rda")
 contrasts<-c("45","90")
-par(mfrow=c(2,1))
+par(mfrow=c(1,2))
 for(c in contrasts){
   # Our VULCAN TF enrichment
   if(c=="45"){
@@ -1748,7 +1752,7 @@ length(common) # 148
 
 ```{r, fig.cap=capfig("Comparison of results from the VULCAN and ISMARA methods"), message=FALSE, warning=FALSE}
 # Plots
-par(mfrow=c(2,1))
+par(mfrow=c(1,2))
 
 # 45 minutes
 x<-vulcan45[common]
@@ -1766,4 +1770,324 @@ top<-intersect(names(sort(x,dec=TRUE))[1:25],names(sort(y,dec=TRUE))[1:25])
 plotCI(x,y,uiw=uiw,xlab="VULCAN NES",ylab="ISMARA Activity",main="Comparison VULCAN/ISMARA",pch=20,col="grey",xlim=c(min(x),max(x)*1.1))
 mtext("90 minutes",cex=0.8)
 textplot2(x[top],y[top],words=top,new=FALSE,font=2)
+```
+
+
+
+
+# Testing VULCAN on different datasets
+We will show how VULCAN can be used on more independent ChIP-Seq datasets, arising from patient data and different sample types.
+
+## Breast Cancer Xenografts
+We tested  VULCAN on another ChIP-Seq dataset (available on GEO series GSE110824). We used a TCGA-derived breast cancer network.
+```{r xenogratfs, message=FALSE, warning=FALSE}
+
+list_eg2symbol<-as.list(org.Hs.egSYMBOL[mappedkeys(org.Hs.egSYMBOL)]) 
+fname<-"results/009_vobj_xeno.rda"
+
+
+if(!file.exists(fname)){
+  ctcf<-readRDS("chipseq/holdingNAR/ctcf.rds")
+  pdx<-readRDS("chipseq/holdingNAR/pdx.rds")
+  
+  # Build input object
+  peakcounts<-matrix(NA,nrow=nrow(pdx$peaks[[1]]),ncol=nrow(pdx$samples)+3)
+  colnames(peakcounts)<-c("Chr","Start","End",pdx$samples$SampleID)
+  peakcounts[,"Chr"]<-pdx$peaks[[1]]$Chr
+  peakcounts[,"Start"]<-pdx$peaks[[1]]$Start
+  peakcounts[,"End"]<-pdx$peaks[[1]]$End
+  peakcounts<-as.data.frame(peakcounts)
+  peakrpkms<-peakcounts
+  for(i in 1:nrow(pdx$samples)){
+    peakcounts[,i+3]<-pdx$peaks[[i]]$Reads
+    peakrpkms[,i+3]<-pdx$peaks[[i]]$RPKM
+  }
+  samples<-list(A=c("PDX01","PDX04"),B=c("PDX03","PDX05"),X="PDX02")
+  vobj<-list(peakcounts=peakcounts,samples=samples,peakrpkms=peakrpkms)
+  
+  # And then standard VULCAN pipeline
+  vobj<-vulcan.annotate(vobj,lborder=-10000,rborder=10000,method='sum')
+  vobj<-vulcan.normalize(vobj)
+  names(vobj$samples)
+  vobj_xeno<-viper(vobj$normalized,regulon=tcga_regulon)
+  rownames(vobj_xeno)<-list_eg2symbol[rownames(vobj_xeno)]
+  save(vobj_xeno,file=fname)  
+  rm(vobj,ctcf,pdx)
+} else {
+  load(fname)
+}
+```
+We show again a co-activity pattern of ESR1 with FOXA1 and GATA3, and an inverse correlation between ESR1 and FOXC1.
+```{r, fig.cap=capfig("VULCAN Activity scores for a few TFs extracted from the ER-targeted ChIP-Seq Xenograft dataset GSE110824"), message=FALSE, warning=FALSE}
+sometfs<-c("ESR1","FOXA1","GATA3","FOXC1")
+vobj_xeno<-vobj_xeno[,c("PDX01","PDX02","PDX03","PDX04","PDX05")]
+xenoidconverter<-setNames(c("AB555B","VHI0244o2","AB580","STG195","V0980U"),c("PDX01","PDX02","PDX03","PDX04","PDX05"))
+plot(vobj_xeno[sometfs[1],],type="l",lwd=4,ylab=c("Relative NES in sample"),xaxt="n",main="Xenograft dataset",xlab="")
+axis(1,at=c(1:ncol(vobj_xeno)),labels=xenoidconverter[colnames(vobj_xeno)],font=2)
+lines(vobj_xeno[sometfs[2],],type="l",lwd=4,col=2,lty=2)
+lines(vobj_xeno[sometfs[3],],type="l",lwd=4,col=3,lty=3)
+lines(vobj_xeno[sometfs[4],],type="l",lwd=4,col=4,lty=4)
+grid()
+legend("topright",legend=sometfs,bg="white",col=1:4,lty=1:4,lwd=4)
+mtext("GEO series GSE110824",cex=0.8)
+```
+
+## Prostate Cancer Data
+We tested VULCAN on patient ChIP-Seq samples from human prostate cancer cell lines. We used a TCGA-derived prostate cancer network, available on the _aracne.networks_ Bioconductor package. We obtained the raw data from the Sahu et al., 2013 Cancer Research study available on GEO series [GSE39880](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE39880). This dataset focuses on Androgen Receptor (AR) binding events in LNCaP-1F5 prostate-derived cells treated with CPA, RU486 and DHT. Reads were aligned using Bowtie2 and peaks were called using Macs 1.4. Only samples with biological replicates in the dataset are shown.
+```{r prostate, message=FALSE, warning=FALSE}
+# Import
+sheetfile<-"chipseq/prostateAR/sheetmini.csv"
+fname<-"results/010_input_prostateAR.rda"
+if(!file.exists(fname)){
+  vobj<-vulcan.import(sheetfile)
+  save(vobj,file=fname)
+} else {
+  load(fname)
+}
+
+fnamm<-"results/010_vulcan_prostateAR.rda"
+if(!file.exists(fnamm)){
+  samples<-list(AR_CPA=c("AR_CPA_1","AR_CPA_2"),AR_RU486=c("AR_RU486_1","AR_RU486_2"),AR_DHT=c("AR_DHT_1","AR_DHT_2"))
+  vobj<-list(peakcounts=vobj$peakcounts,samples=samples,peakrpkms=vobj$peakrpkms)
+  
+  
+  # Annotation
+  vobj<-vulcan.annotate(vobj,lborder=-10000,rborder=10000,method="sum")
+  
+  # Normalization
+  vobj_prostateAR<-vulcan.normalize(vobj)
+  save(vobj_prostateAR,file="results/010_vobj_prostateAR.rda")
+  
+  # Obtain prostate carcinoma (prad) regulon from bioconductor
+  library(aracne.networks)
+  data(regulonprad)
+  
+  # Vulcan inference
+  names(vobj_prostateAR$samples)
+  vobj_prostateAR<-viper(vobj_prostateAR$normalized,regulon=regulonprad)
+  rownames(vobj_prostateAR)<-list_eg2symbol[rownames(vobj_prostateAR)]
+  save(vobj_prostateAR,file=fnamm)  
+} else {
+  load(fnamm)
+}
+```
+The bar plots show the relative VULCAN Normalized Enrichment Score calculated on absolute peak intensities after treating cells with Dihydrotestosterone (DHT) and partial AR modulators cyproterone acetate (CPA) and Mifepristone (RU486). FOXA1 network binding is higher in presence of the strong AR recruiter DHT, partially confirming the results of the original study. Two replicates for each treatment were produced and are reported in matching colors.
+```{r, fig.cap=capfig("VULCAN Activity scores for FOXA1 in Prostate cell lines (dataset GSE39880)"), message=FALSE, warning=FALSE}
+par(las=2)
+toplot<-vobj_prostateAR["FOXA1",]
+names(toplot)<-gsub("AR_","",names(toplot))
+names(toplot)<-gsub("_"," ",names(toplot))
+barplot(toplot,cex.names=0.8,col=c(2,2,3,3,4,4),ylab="FOXA1 Vulcan Score")
+par(las=1)
+title("AR ChIP-Seq in Prostate Cells")
+mtext("GEO series GSE39880",cex=0.8)
+```
+
+# Characterize GHRL2
+We will perform a Fisher's Exact one tail test analysis using the MSIGDB database, to collect clues on the function of this transcriptional regulator. Note: the hypergeometric R implementation for the one-tailed Fisher test, as described here: https://mengnote.blogspot.it/2012/12/calculate-correct-hypergeometric-p.html (Results are identical to a Fisher test, but faster to compute).
+```{r grhl2, message=FALSE, warning=FALSE}
+fnamm<-"results/011_grhl2_fet.rda"
+if(!file.exists(fnamm)){
+  load("data/msigdb.v6.1.entrez.rda")
+  targets_grhl2<-names(tcga_regulon[["79977"]]$tfmode)
+  
+  ### Calculate Contigency Tables
+  contingencyFunction<-function(set,list){
+    if(!exists("universegenelist")){
+      universegenelist<<-unique(unlist(list))
+    }
+    out<-t(sapply(list,function(x){
+      ul<-intersect(x,set)
+      ur<-setdiff(set,ul)
+      dl<-setdiff(x,ul)
+      dr<-setdiff(universegenelist,c(ul,ur,dl))
+      return(c(length(ul),length(ur),length(dl),length(dr)))
+    }))
+    return(out)
+  }
+  grhl2_ctables<-contingencyFunction(targets_grhl2,msigdb)
+  
+  grhl2_fet<-apply(grhl2_ctables,1,function(f){
+    w<-f[1]
+    x<-f[2]
+    y<-f[3]
+    z<-f[4]
+    p<-phyper(w-1,x+w,z+y,y+w,lower.tail=FALSE)
+  })
+  
+  
+  
+  save(grhl2_fet,file=fnamm)
+  
+  rm(msigdb)
+} else {
+  load(fnamm)
+}
+```
+```{r, fig.cap=captab("10 gene sets from the MsigDB chemical/genetic perturbetion set, which are most overlapping with GRHL2 targets identified by our network analysis"), message=FALSE, warning=FALSE}
+# Write the output NICELY
+classnames<-setNames(
+  c(
+    "C1 positional gene sets",
+    "C2 chemical and genetic perturbations",
+    "C2 BioCarta gene sets",
+    "C2 KEGG gene sets",
+    "C2 Reactome gene sets",
+    "C2 Canonical pathways",
+    "C3 microRNA targets",
+    "C3 transcription factor targets",
+    "C4 cancer gene neighborhoods",
+    "C4 cancer modules",
+    "C5 GO biological process",
+    "C5 GO cellular component",
+    "C5 GO molecular function",
+    "C6 oncogenic signatures",
+    "C7 immunologic signatures",
+    "H hallmark gene sets"
+  ),
+  c("c1_all","c2_cgp","c2_cpbiocarta","c2_cpkegg","c2_cpreactome","c2_cp","c3_mir","c3_tft",      
+    "c4_cgn","c4_cm","c5_bp","c5_cc","c5_mf","c6_all","c7_all","h_all")
+)
+
+
+# Print Enrichment
+fet<-grhl2_fet
+classes<-unique(gsub(";_;.+","",names(fet)))
+append<-FALSE
+class<-classes[2]
+subfet<-fet[grep(paste0(class,";_;"),names(fet))]
+names(subfet)<-gsub(".+;_;","",names(subfet))
+subfet<-sort(subfet,dec=FALSE)
+subfet<-cbind(names(subfet),subfet,p.adjust(subfet,method="bonferroni"))
+colnames(subfet)<-c("Gene Set","P-value","Q-value")
+subfet[,2]<-signif(as.numeric(subfet[,2]),3)
+subfet[,3]<-signif(as.numeric(subfet[,3]),3)
+rownames(subfet)<-NULL
+
+
+grid.newpage()
+grid.table(subfet[1:10,])
+
+
+```
+
+# Overlap with Motif analysis
+We compare our analysis with a direct binding strategy. In order to do so, we directly compare the gene networks used by VULCAN with transcription factor targets	gene sets that share upstream cis-regulatory motifs which can function as potential transcription factor binding sites. This motif analysis is based on work by Xie et al. 2005 and processed by the MsigDB project (C3 collection).
+```{r motif, fig.cap=capfig("Example: VULCAN scores of GATA3 and ESR1 in our dataset. Individual samples are indicated."), message=FALSE, warning=FALSE}
+load("data/msigdb.v6.1.entrez.rda")
+
+# VULCAN score correlation example: GATA3 vs ESR1
+load("results/001_vobj.rda") # vobj
+fname<-"results/012_vulcanscores.rda"
+if(!file.exists(fname)){
+  vulcanscores<-viper(vobj$normalized,regulon=tcga_regulon)
+  save(vulcanscores,file=fname)
+} else {
+  load(fname)
+}
+X<-vulcanscores[list_symbol2eg["ESR1"],]
+Y<-vulcanscores[list_symbol2eg["GATA3"],]
+plot(X,Y,xlab="ESR1 VULCAN score",ylab="GATA3 VULCAN score",main="VULCAN score in our dataset",pch=NA)
+text(X,Y,labels=colnames(vulcanscores))
+grid()
+abline(lm(Y~X)$coef)
+scc<-signif(cor(X,Y,method="s"),3)
+mtext(paste0("Spearman correlation: ",scc),cex=0.8)
+```
+
+```{r, fig.cap=capfig("Example of target intersection between GATA3 and ER according to the MSigDB database of canonical TF-specific motifs in putative target gene promoters"), message=FALSE, warning=FALSE}
+# Motif-based targets overlap example: GATA3 vs. ESR1
+motifdb<-msigdb[grep("c3_tft;_;",names(msigdb))]
+grep("GATA3",names(motifdb),value=TRUE)
+grep("ER",names(motifdb),value=TRUE)
+ER_Targets<-msigdb[["c3_tft;_;ER_Q6"]]
+GATA3_Targets<-msigdb[["c3_tft;_;GATA3_01"]]
+# Significance of overlap (Fisher Test)
+ul<-intersect(GATA3_Targets,ER_Targets)
+ur<-setdiff(GATA3_Targets,ul)
+dl<-setdiff(ER_Targets,ul)
+setp<-fet<-fisher.test(rbind(c(length(ul),length(ur)),c(length(dl),20000-length(ul)-length(ur)-length(dl))),alternative="greater")$p
+# Plot it
+library(VennDiagram)
+v<-venn.diagram(list(GATA3_Targets=GATA3_Targets, ER_Targets=ER_Targets),
+                fill = c("orange", "blue"),
+                alpha = c(0.5, 0.5), cat.cex=1,
+                filename=NULL,lty=2,
+                #main=paste0("FET p=",signif(setp,4)),
+                cex=0.6,rotation.degree = 0,main.pos=c(0.5,0)
+)
+grid.newpage()
+grid.draw(v)
+
+```
+
+We then decided to compare TF overlap according to VULCAN score and a classic approach: overlap of putative target genes with promoters carrying canonical and TF specific binding motifs. There is no correlation between the two approaches.
+
+```{r motif2, message=FALSE, warning=FALSE}
+# Enrichment of target overlaps with targets defined by motif analysis
+
+### any2entrez function
+any2entrez<-function(x){
+  tab<-AnnotationDbi::select(org.Hs.eg.db, keys=x, columns=c("ENTREZID"), keytype="ALIAS")
+  symbols<-tab[,1]
+  entrez<-tab[,2]
+  dups<-which(duplicated(symbols))
+  symbols<-symbols[-dups]
+  entrez<-entrez[-dups]
+  out<-setNames(entrez,symbols)
+  return(out)
+}
+
+# Get TFs from the msigdb motif database
+submotifdb<-motifdb[grep("UNKNOWN",names(motifdb),invert=TRUE)]
+names(submotifdb)<-gsub("c3_tft;_;","",names(submotifdb))
+names(submotifdb)<-gsub("ER_","ESR1_",names(submotifdb))
+names(submotifdb)[1:441]<-sapply(strsplit(names(submotifdb)[1:441],"_"),function(x){x[1]})
+names(submotifdb)[441:500]<-sapply(strsplit(names(submotifdb)[441:500],"_"),function(x){x[2]})
+names(submotifdb)<-any2entrez(names(submotifdb))
+submotifdb<-submotifdb[!is.na(names(submotifdb))]
+tfs_with_motifs<-names(submotifdb)
+tfs_with_vulcan<-rownames(vulcanscores)
+tfs_with_both<-intersect(tfs_with_motifs,tfs_with_vulcan)
+
+# Compare VULCAN correlation with MOTIF overlap
+corvulcan<-cor(t(vulcanscores[tfs_with_both,]),method="s")
+fetmotif<-matrix(NA,nrow=nrow(corvulcan),ncol=ncol(corvulcan),dimnames=dimnames(corvulcan))
+for(i in 1:nrow(corvulcan)){
+  for(j in (i+1):nrow(corvulcan)){
+    if(j>nrow(corvulcan)|j==i){
+      next
+    }
+    targets1<-submotifdb[[rownames(corvulcan)[i]]]
+    targets2<-submotifdb[[rownames(corvulcan)[j]]]
+    JI<-length(intersect(targets1,targets2))/length(union(targets1,targets2))
+    fetmotif[i,j]<-JI
+    
+  }
+}
+```
+
+```{r, fig.cap=capfig("TF pairs compared in terms of VULCAN score Spearman Correlation Coefficient in our ER dataset and in terms of Jaccard Index of motif-based target intersection according to the MSigDB C3 collection"), message=FALSE, warning=FALSE}
+# Plot the Motif overlap JI with the vulcan-score correlation between TF pairs
+x<-corvulcan[upper.tri(corvulcan,diag=FALSE)]
+y<-fetmotif[upper.tri(fetmotif,diag=FALSE)]
+
+plot(x,y,xlab="SCC VULCAN score",ylab="Jaccard Index of Motif Overlap",main="TF pairs",pch=20)
+minpair<-which(fetmotif==max(fetmotif,na.rm=TRUE),arr.ind=TRUE)
+tf1<-list_eg2symbol[[rownames(corvulcan)[minpair[1,1]]]]
+tf2<-list_eg2symbol[[rownames(corvulcan)[minpair[1,2]]]]
+text(corvulcan[minpair[1,1],minpair[1,2]],fetmotif[minpair[1,1],minpair[1,2]],labels=paste0(tf1,"-",tf2),font=2,col="red3")
+
+tf1<-list_symbol2eg[["ESR1"]]
+tf2<-list_symbol2eg[["GATA3"]]
+text(corvulcan[tf2,tf1],fetmotif[tf2,tf1],labels=paste0(list_eg2symbol[[tf1]],"-",list_eg2symbol[[tf2]]),font=2,col="red3")
+
+rm(msigdb)
+```
+
+
+# Technical Session Info
+The following code describes the R environment used to generate this document and will help making it fully reproducible should there be future updates in any of the packages.
+```{r sessionInfo}
+sessionInfo()
 ```
