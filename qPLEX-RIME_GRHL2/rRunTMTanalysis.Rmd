@@ -189,7 +189,7 @@ rawMSnset <- convertToMSnset(data = intensities, metadata = metadata,
 # fasta file of protein sequence
 fastaFile <- paste0("accessoryFiles/", UniProtAccession, ".fasta")
 fastaUrl <- paste0("http://www.uniprot.org/uniprot/", UniProtAccession, ".fasta")
-download.file(fastaUrl, fastaFile, "wget")
+download.file(fastaUrl, fastaFile)
               
 # annotation table
 humanUP <- UniProt.ws::UniProt.ws(taxId=9606)
@@ -228,6 +228,7 @@ peptides, but median number of peptides per protein was **`r median(peptidesPerP
 
 ```{r coveragePlot, echo=F, fig.width=10, fig.height=2, fig.cap=covCap, results="asis"}
 covCap <- refcaption("covFig", paste0("Plot of peptide coverage for ", baitProtein, " (UniprotID: ", UniProtAccession, ")"))
+#colnames(fData(rawMSnset))[6]<-"Master.Protein.Accessions"
 coveragePlot2(data=rawMSnset, ProteinID=UniProtAccession, ProteinName=baitProtein, fastaFile=fastaFile)
 ```
 
