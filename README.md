@@ -4,7 +4,7 @@ Bioconductor Package https://bioconductor.org/packages/release/bioc/html/vulcan.
 
 Source Data can be found on GEO, GSE109820.
 
-* Supplementary File 1 - (S1_qPCR_ER/Manuscript_Figures.pdf)
+* [Supplementary File 1](S1_qPCR_ER/Manuscript_Figures.pdf)
 * Supplementary File 2 - (S2_ChIP-seq_ER/rmarkdown.pdf)
 * Supplementary File 3 - (S3_qPLEX-RIME_ER/02.Supplementary.pdf)
 * Supplementary File 4 - (S4_qPLEX-RIME_GRHL2/rRunTMTanalysis.pdf)
