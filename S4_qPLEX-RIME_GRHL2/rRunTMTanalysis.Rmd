@@ -1,0 +1,597 @@
+---
+title: |
+  | Proteomics RIME-TMT analysis report
+  | Holding: Changes in GRHL2 interactome on Activation
+always_allow_html: yes
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_notebook:
+    number_sections: yes
+    toc: yes
+    toc_depth: 3
+  html_document:
+    toc: yes
+    toc_depth: '3'
+
+---
+
+```{r setup_qplex, include=FALSE}
+
+
+library(UniProt.ws)
+library(plyr)
+library(dplyr)
+library(magrittr)
+library(qPLEXanalyzer)
+library(knitr)
+library(readxl)
+library(grid)
+library(ggplot2)
+library(DT)
+library(rmarkdown)
+options(stringsAsFactors=F)
+
+# knitr options
+opts_knit$set(eval.after = 'fig.cap')
+```
+
+```{r numberingFunctions, include=F}
+# This deals with captioning and links to figure and tables
+# Autonumbering is handled automatically in PDFs, but with HTML we need a function to deal with it
+
+# reflink generates links to figures/tables.
+# refcaption creates an anchor and a caption for a table/figure
+# the "refName" argument matches these together
+# e.g. reflink("myFig") will create a link in the text to the figure with a caption created
+#   by refcaption("myFig", "This is the caption")
+# add refType="Table" to link/caption a table
+
+numberingList <- list(Figure=list(startFig=0), Table=list(startTab=0))
+
+getNumber <- function(refName, refType, numList=numberingList){
+    if(!refName%in%names(numList[[refType]])){
+        numList[[refType]][[refName]] <- max(unlist(numList[[refType]]))+1 
+        numberingList <<- numList
+    }
+    refNum <- numList[[refType]][[refName]]
+    return(refNum)
+}
+reflink <- function(refName, refType="Figure"){
+    refNum <- getNumber(refName, refType)
+    paste0("[", refType, " ", refNum, "](#", refName, ")")
+}
+refcaption <- function(refName, refCaption, refType="Figure"){
+    refNum <- getNumber(refName, refType)
+    if(refType=="Table"){
+        cap <- htmltools::tags$caption(style = 'caption-side: top; text-align: center;',
+                                       htmltools::strong(paste0('Table ', refNum, ': ', refCaption)))
+    }else{
+        cap <- paste0("**", refType, " ", refNum, ". ", refCaption, "  **")
+    }
+    cat(paste0("<a id=\"", refName, "\"></a>"))
+    return(cap)
+}
+
+```
+
+```{r myCovPlotFunct, include=F}
+coveragePlot2 <- function(data, ProteinID, ProteinName, fastaFile, myCol="brown")
+{
+    suppressPackageStartupMessages(library(GenomicRanges))
+    suppressPackageStartupMessages(library(Biostrings))
+    
+    if(!is(data,"MSnSet"))
+    stop('data has to be of class MSnSet..')
+    if(!is(ProteinID,"character"))
+    stop('ProteinID has to be of class character..')
+    if(!is(ProteinName,"character"))
+    stop('ProteinName has to be of class character..')
+    if(!is(fastaFile,"character"))
+    stop('fastaFile has to be of class character..')
+    if(!is(myCol,"character"))
+    stop('myCol has to be of class character..')
+    ProteinName <- as.character(ProteinName)
+    
+    # extract peptide sequence from MsnSet object
+    peptide_seq <- fData(data) %>% 
+        filter(Master.Protein.Accessions==ProteinID) %>% 
+        use_series(Annotated.Sequence) %>% 
+        gsub("^.{4}([A-Z]+).{4}$", "\\1", .)
+    
+    ## read protein sequence from fastafile
+    Protein_seq <- readAAStringSet(fastaFile)
+    
+    ## match peptide sequence with protein sequence and store co-ordinates
+    getPosition <- function(peptideSeq, ProteinSeq=Protein_seq){
+        vmatchPattern(peptideSeq, ProteinSeq) %>% 
+            as.data.frame() %>% 
+            dplyr::select(start, end) %>% 
+            return()
+    }
+    
+    features <- lapply(peptide_seq, getPosition) %>% 
+      do.call(rbind, .)
+    
+    # get percent coverage 
+    protWidth <- width(Protein_seq)
+    coverage <- GRanges("feature",IRanges(features$start,features$end)) %>% reduce() %>% width() %>% sum()
+    Perct <- round(coverage/protWidth*100,2)
+    SubTitle <- paste0("Number of Unique Peptides: ", length(unique(peptide_seq)), "\n% Coverage: ", Perct)
+    
+    nTicks <- min(c(7, ceiling(protWidth/50) + 1))
+    brkTicks <- round(seq(0,protWidth, length.out = nTicks), 0)
+    
+    features %>% 
+      distinct() %>% 
+      ggplot() +
+          geom_rect(aes(xmin=start-1, xmax=end, ymin=0, ymax=10), fill=myCol) +
+          geom_rect(xmin=0, xmax=protWidth, ymin=0, ymax=10, colour="black", fill=NA, size=0.15) +
+          labs(title=ProteinName,
+               subtitle=SubTitle) +
+          theme(axis.title.y=element_blank(),
+                axis.text.y=element_blank(),
+                axis.ticks.y=element_blank(),
+                panel.background = element_rect(fill = "white"), 
+                panel.border = element_blank(),
+                plot.subtitle = element_text(hjust = 0.5),
+                plot.title = element_text(hjust = 0.5)) +
+          scale_x_continuous(limits=c(0,protWidth), breaks=brkTicks) +
+          scale_y_continuous(limits=c(0,10), breaks=c(0,10), expand = c(0, 0)) %>% 
+    return()
+}
+
+```
+
+<!--
+Project Title: Holding: Changes in GRHL2 interactome on Activation
+Redmine number: 5045
+Proteomics LIMS:
+    Project Name: GRHL2 0-45 minutes
+    Project ID: PR882
+    Quantification method: TMT
+Reagent used: 11-plex
+-->
+
+```{r getData, include=F}
+
+# constants
+baitProtein <- "GRHL2"
+UniProtAccession <- "Q6ISB3"
+intensitiesFile <- "intensities/Velos_PR882_ANH_07122017_Peptide_Intensities.xlsx"
+outputDir <- "results/"
+
+# read the intensities excel file and replace NA in the IgG columns with 0.001
+intensities <-  read_xlsx(intensitiesFile, 1) %>% 
+    mutate_at(vars(starts_with("IGG")), funs(ifelse(is.na(.), 0.001, .)))
+
+
+# the sample names used by proteomics start with numbers, so R has adds an X to the beginning of the 
+# column names. Change the column names to so the "0min" is "Ctrl" "45min" is "ER"
+# also "read_xlsx" leaves spaces in the column names, need to replace these with "."
+colnames(intensities) <- gsub(" ", ".", gsub("X*0min", "Ctrl", gsub("X*45min", "ER", colnames(intensities))))
+
+# create a metadata table
+metadata <- data.frame(Experiment=colnames(intensities)[7:17],
+                       Label=factor(c(rep("Ctrl", 4), rep("ER", 4), rep("IgG", 3))),
+                       Bio.Rep=c(rep(1:4, 2), 1:3),
+                       Tech.Rep=NA,
+                       Analyt.Rep=NA,
+                       Grp=c(rep(1, 8), rep(2, 3))) 
+
+# create MSnset object
+rawMSnset <- convertToMSnset(data = intensities, metadata = metadata, 
+                             indExpData = 7:17, indFData = 1:6,
+                             rmMissing=TRUE)
+
+
+# fasta file of protein sequence
+fastaFile <- paste0("accessoryFiles/", UniProtAccession, ".fasta")
+fastaUrl <- paste0("http://www.uniprot.org/uniprot/", UniProtAccession, ".fasta")
+download.file(fastaUrl, fastaFile)
+              
+# annotation table
+humanUP <- UniProt.ws::UniProt.ws(taxId=9606)
+keys <- unique(intensities$Master.Protein.Accessions)
+columns <- c("ENTRY-NAME", "PROTEIN-NAMES", "GENES")
+annot <- UniProt.ws::select(humanUP, keys, columns, "UNIPROTKB") %>% 
+    mutate(GeneSymbol=gsub(" .*", "", GENES)) %>% 
+    dplyr::select(Protein="UNIPROTKB", Gene="ENTRY-NAME", Description="PROTEIN-NAMES", GeneSymbol)
+```
+
+```{r dataForIntroduction, include=F}
+
+# count protein peptide representation
+numberOfSamples <- nrow(metadata)
+numberOfPeptides <- nrow(intensities)
+numberOfProteins <- length(unique(intensities$Master.Protein.Accessions))
+
+peptidesPerProtein <- table(intensities$Master.Protein.Accessions)
+```
+
+
+## Introduction
+
+This report provides a summary of the results of your proteomics experiment.
+
+Your experiment has **`r numberOfSamples`** samples. **`r numberOfPeptides`** peptides from **`r numberOfProteins`** 
+unique proteins were captured in the experiment. Each protein is represented by **`r min(peptidesPerProtein)`** to **`r max(peptidesPerProtein)`**
+peptides, but median number of peptides per protein was **`r median(peptidesPerProtein)`**. 
+
+
+## Raw data QC
+
+### Coverage plot
+
+`r reflink("covFig")` shows the coverage of the bait protein, `r baitProtein`, in terms of peptides detected.  
+
+```{r coveragePlot, echo=F, fig.width=10, fig.height=2, fig.cap=covCap, results="asis"}
+covCap <- refcaption("covFig", paste0("Plot of peptide coverage for ", baitProtein, " (UniprotID: ", UniProtAccession, ")"))
+#colnames(fData(rawMSnset))[6]<-"Master.Protein.Accessions"
+coveragePlot2(data=rawMSnset, ProteinID=UniProtAccession, ProteinName=baitProtein, fastaFile=fastaFile)
+```
+
+### Intensity Plot
+
+`r reflink("intFig")` shows the distribution of raw peptide intensities for each sample.
+
+```{r rawIntensityPlot, echo=F, fig.width=10, fig.cap=intCap, results="asis"}
+intCap <- refcaption("intFig", "Raw intensities plot.")
+sampleColours <- assignColours(rawMSnset, groupColourSchemes = 
+                                 c("Blues","Reds","Greens"))
+rawIP <- intensityPlot(rawMSnset, sampleColours, title = "Peptide intensity distribution")
+print(rawIP)
+```
+
+### Peptide intensities for GHRL2
+
+`r reflink("baitIntFig")` shows the raw intensities for each peptide detected for the bait protein `r baitProtein`
+in each sample.
+
+```{r baitPeptideIntensities, echo=F, fig.width=10, fig.cap=baitIntCap, results="asis"}
+baitIntCap <- refcaption("baitIntFig", "Peptide intensities for GRHL2.")
+peptideIntensityPlot(rawMSnset, combinedIntensities=NULL, UniProtAccession,
+                                 title = "", ylab = "log2(peptide intensity)",
+                                 minIntensity = NA, maxIntensity = NA,
+                                 selectedSequence = NULL, selectedModifications = NULL)
+```
+
+
+### Correlation Plot
+
+`r reflink("corFig")` shows a correlation matrix to visualize the level of linear association of samples
+within and between groups based on the raw peptide intensities.
+
+```{r rawCorrPlot, echo=F, fig.width=10, fig.cap=corCap, results="asis"}
+corCap <- refcaption("corFig", "Correlation plot based on raw intensities.")
+corrPlot(rawMSnset, method="shade")
+```
+
+### Hierichical clustering dendrogram
+ 
+`r reflink("hcFig")` shows a dendrogram displaying the hierarchical relationship among samples. The vertical axis 
+shows the dissimilarity (measured by  means  of  the  Euclidean  distance)  between  samples:  similar  
+samples  appear  on  the  same  branches. Colors  correspond  to sample groups.  
+ 
+```{r rawHCPlot, echo=F, fig.width=10, fig.cap=hcCap, results="asis"}
+hcCap <- refcaption("hcFig", "Hierachical clustering based on raw intensities.")
+hcTmp <- rawMSnset
+exprs(hcTmp) <- exprs(hcTmp)+0.01
+label_color <- c(rep("red",4),rep("darkgreen",4),rep("orange",2))
+hierarchicalPlot(hcTmp,label_color,branchlength=95,title="Clustering plot")
+rm(hcTmp)
+
+```
+
+### PCA Plot
+
+`r reflink("pcFig")` shows a visual representation of the scaled loading of the first two dimensions of a principle
+component analysis of the raw peptide intensities.
+
+```{r rawPCAPlot, echo=F, fig.width=10, fig.cap=pcCap, results="asis"}
+pcCap <- refcaption("pcFig", "Principle Component Analysis based on raw intensities.")
+grpcolor <- c("red", "darkgreen", "orange")
+rawPCP <- qPLEXanalyzer::pcaPlot(rawMSnset, groupColours=grpcolor, title = "PCA plot", 
+        labels = rawMSnset$Bio.Rep, labelsize=2, legend=TRUE)# + 
+    theme(aspect.ratio=1)
+print(rawPCP)
+```
+
+### QC Conclusion
+
+The sample Ctrl rep 1 appears to be an outlier. The differential anlaysis was carried out twice, first
+with this sample included and then again with the sample excluded. 
+
+## Full data set analysis
+
+The following section shows the results for analysis of all 8 samples.
+
+```{r analysisFull, include=F}
+# normalisation
+normFullMSnset <- groupScaling(rawMSnset,func=median, Grp="Grp")
+pnormFullMSnset <- summarizeIntensities(normFullMSnset, sum, annot)
+
+# differential analysis
+contrasts <- c(ER_v_Ctrl = "ER - Ctrl")
+contrastName <- gsub(" - ", "_v_", contrasts)
+diffstats <- computeDiffStats(data=pnormFullMSnset, contrasts=contrasts, 
+                              applyLog2Transform = TRUE)
+diffexpFull <- getContrastResults(diffstats=diffstats, contrast=contrasts, 
+                              controlGroup = "IgG", ann = annot) %T>% 
+    write.csv(paste0(outputDir, "/DifferentialAbundance.", contrastName, ".FullData.csv"), row.names=F)
+```
+
+### Effect of within group normalisation
+
+Normalisation was carried out using median scaling. The experimental samples and the IgG control samples
+were normalised separately.
+`r reflink("fullQCFig")` show the effects of normalisation on the intensity plots and the principle component
+analysis.
+
+```{r withinGroupNormaliation, echo=F, fig.width=10, fig.cap=fullQCCap, results="asis"}
+fullQCCap <- refcaption("fullQCFig", "Effects of normalisation on peptide intensities.")
+normIP <- intensityPlot(normFullMSnset, sampleColours, title = "WithinGrp Scaling") + 
+    theme(legend.position = "bottom")
+rawPCP <- qPLEXanalyzer::pcaPlot(normFullMSnset, groupColours=grpcolor, title = "PCA plot", 
+        labels = rawMSnset$Bio.Rep, labelsize=2, legend=TRUE) +
+    theme(legend.position = "bottom")
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow = 1, ncol = 2)))
+ define_region <- function(row, col){
+   viewport(layout.pos.row = row, layout.pos.col = col)
+}
+print(normIP, vp = define_region(row = 1, col = 1)) 
+print(rawPCP, vp = define_region(row = 1, col = 2)) 
+
+```
+
+### Differential analysis results
+
+`r reflink("fullDATab")` shows differential abundancy results. No proteins were statistically differentially abundant.
+`r reflink("fullQCFig")` shows an MA plot and a volcano plot of the differental analysis results.
+
+```{r daResTabFull, echo=F, results="asis"}
+
+deFColnames <- c("Protein", "Gene", "Description", "Gene Symbol", "log2(Fold Change)", "Adjusted p-value")
+deFCap <- refcaption("fullDATab", "Differential abundancy results using all 8 samples.", refType = "Table")
+deFOptions <- list(columnDefs = list(list(className = 'dt-center', targets="_all")), dom='ltip')
+diffexpFull %>% 
+    dplyr::select(Protein, Gene, Description, GeneSymbol, logFC, adj.P.Val) %>% 
+    datatable(colnames=deFColnames, options=deFOptions, rownames = FALSE, caption=deFCap)
+
+```
+
+```{r resPlotFull, echo=F, fig.width=10, fig.cap=fullDACap, results="asis"}
+fullDACap <- refcaption("fullDAFig", "MA plot and volcano plot of differential protein abundancy.")
+
+MAPlot <- qPLEXanalyzer::maPlot(diffexpFull, significanceLevel = 0.0025, minLogFoldChangeForLabelling = 1.5,
+             title="")  +
+          labs(y="log2(Fold Change)")
+
+volPlot <- diffexpFull %>% 
+    mutate(phredAdjPval=-log10(adj.P.Val)) %>% 
+    mutate(Signif=ifelse(adj.P.Val<=0.01, "<=0.01", ifelse(adj.P.Val<=0.05, "<=0.05", ">0.05"))) %>% 
+    ggplot() +
+        geom_point(aes(x=logFC, y=phredAdjPval, fill=Signif), colour="black", shape=21) +
+        scale_fill_manual(values=c("red", "orange", "black"), name="Adjusted p-value", limits=c("<=0.01", "<=0.05", ">0.05"), drop = TRUE) +
+        theme_minimal() +
+        labs(x="log2(Fold Change)", y="-log10(Adjusted p-value)") +
+    theme(legend.position = "bottom")
+
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow = 1, ncol = 2)))
+ define_region <- function(row, col){
+   viewport(layout.pos.row = row, layout.pos.col = col)
+}
+print(MAPlot, vp = define_region(row = 1, col = 1)) 
+print(volPlot, vp = define_region(row = 1, col = 2)) 
+
+```
+
+## Remove sample Ctrl 1
+
+The following section shows the same analysis, but with the Ctrl rep 1 sample removed
+
+```{r analysisTrim, include=F}
+trimMSnset <- rawMSnset[,-1]
+sampleColours <- assignColours(trimMSnset, groupColourSchemes = c("Blues","Reds","Greens"))
+
+# normalisation
+normTrimMSnset <- groupScaling(trimMSnset, func=median, Grp="Grp")
+
+# summarise
+pnormTrimMSnset <- summarizeIntensities(normTrimMSnset, sum, annot)
+```
+
+### Effect of within group normalisation
+
+Normalisation was carried out using median scaling. The experimental samples and the IgG control samples
+were normalised separately.
+`r reflink("trimQCFig")` show the effects of normalisation on the intensity plots and the principle component
+analysis.
+
+```{r withinGroupNormaliationTrim, echo=F, fig.width=10, fig.cap=trimQCCap, results="asis"}
+trimQCCap <- refcaption("trimQCFig", "Effects of normalisation on peptide intensities.")
+normIP <- intensityPlot(normTrimMSnset, sampleColours, title = "WithinGrp Scaling") +
+    theme(legend.position = "bottom")
+rawPCP <- qPLEXanalyzer::pcaPlot(normTrimMSnset, groupColours=grpcolor, title = "PCA plot", 
+        labels = trimMSnset$Bio.Rep, labelsize=2, legend=TRUE) +
+    theme(legend.position = "bottom")
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow = 1, ncol = 2)))
+ define_region <- function(row, col){
+   viewport(layout.pos.row = row, layout.pos.col = col)
+}
+print(normIP, vp = define_region(row = 1, col = 1)) 
+print(rawPCP, vp = define_region(row = 1, col = 2)) 
+
+```
+
+### ER - Ctrl
+
+```{r contrastERCtrl, include=F}
+# differential analysis
+contrasts <- c(ER_v_Ctrl = "ER - Ctrl")
+contrastName <- gsub(" - ", "_v_", contrasts)
+diffstats <- computeDiffStats(data=pnormTrimMSnset, contrasts=contrasts, 
+                              applyLog2Transform = TRUE)
+diffexpTrim <- getContrastResults(diffstats=diffstats, contrast=contrasts, 
+                              controlGroup = "IgG", ann = annot) %T>% 
+    write.csv(paste0(outputDir, "/DifferentialAbundance.", contrastName, ".SevenSamples.csv"), row.names=F)
+```
+
+`r reflink("trimDATab")` shows differential abundancy results for the contrasts `r contrastName`.
+`r reflink("trimQCFig")` shows an MA plot and a volcano plot of the differental analysis results
+
+```{r daResTabTrim, echo=F, results="asis"}
+
+deFCap <- refcaption("trimDATab", "Differential abundancy results using all 8 samples.", refType = "Table")
+deFColnames <- c("Protein", "Gene", "Description", "Gene Symbol", "log(Fold Change)", "Adjusted p-value")
+deFOptions <- list(columnDefs = list(list(className = 'dt-center', targets="_all")), dom='ltip')
+diffexpTrim %>% 
+    dplyr::select(Protein, Gene, Description, GeneSymbol, logFC, adj.P.Val) %>% 
+    datatable(colnames=deFColnames, options=deFOptions, rownames = FALSE, caption=deFCap)
+
+```
+
+```{r resPlotTrim, echo=F, fig.width=10, fig.cap=trimDACap, results="asis"}
+trimDACap <- refcaption("trimDAFig", "MA plot and volcano plot of differential protein abundancy.")
+
+MAPlot <- qPLEXanalyzer::maPlot(diffexpTrim, significanceLevel = 0.0025, minLogFoldChangeForLabelling = 1.5,
+             title=names(contrasts)) +
+          labs(y="log2(Fold Change)")
+
+volPlot <- diffexpTrim %>% 
+    mutate(phredAdjPval=-log10(adj.P.Val)) %>% 
+    mutate(Signif=ifelse(adj.P.Val<=0.01, "<=0.01", ifelse(adj.P.Val<=0.05, "<=0.05", ">0.05"))) %>% 
+    ggplot() +
+        geom_point(aes(x=logFC, y=phredAdjPval, fill=Signif), colour="black", shape=21) +
+        scale_fill_manual(values=c("red", "orange", "black"), name="Adjusted p-value", limits=c("<=0.01", "<=0.05", ">0.05")) +
+        theme_minimal() +
+        labs(x="log2(Fold Change)", y="-log10(Adjusted p-value)") +
+    theme(legend.position = "bottom")
+
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow = 1, ncol = 2)))
+ define_region <- function(row, col){
+   viewport(layout.pos.row = row, layout.pos.col = col)
+}
+print(MAPlot, vp = define_region(row = 1, col = 1)) 
+print(volPlot, vp = define_region(row = 1, col = 2)) 
+
+```
+
+
+### Ctrl - IgG
+
+```{r contrastCtrlIgG, include=F}
+# differential analysis
+contrasts <- c(Ctrl_v_IgG = "Ctrl - IgG")
+contrastName <- gsub(" - ", "_v_", contrasts)
+diffstats <- computeDiffStats(data=pnormTrimMSnset, contrasts=contrasts, 
+                              applyLog2Transform = TRUE)
+diffexpCtrlIgG <- getContrastResults(diffstats=diffstats, contrast=contrasts, 
+                              controlGroup = NULL, ann = annot) %T>% 
+    write.csv(paste0(outputDir, "/DifferentialAbundance.", contrastName, ".SevenSamples.csv"), row.names=F)
+```
+
+`r reflink("CtrlIgGDATab")` shows differential abundancy results for the contrasts `r contrastName`.
+`r reflink("CtrlIgGQCFig")` shows an MA plot and a volcano plot of the differental analysis results.
+
+```{r daResTabCtrlIgG, echo=F, results="asis"}
+
+deFCap <- refcaption("CtrlIgGDATab", "Differential abundancy results using all 8 samples.", refType = "Table")
+deFColnames <- c("Protein", "Gene", "Description", "Gene Symbol", "log(Fold Change)", "Adjusted p-value")
+deFOptions <- list(columnDefs = list(list(className = 'dt-center', targets="_all")), dom='ltip')
+diffexpCtrlIgG %>% 
+    dplyr::select(Protein, Gene, Description, GeneSymbol, logFC, adj.P.Val) %>% 
+    datatable(colnames=deFColnames, options=deFOptions, rownames = FALSE, caption=deFCap)
+
+```
+
+```{r resPlotCtrlIgG, echo=F, fig.width=10, fig.cap=CtrlIgGDACap, results="asis"}
+CtrlIgGDACap <- refcaption("CtrlIgGDAFig", "MA plot and volcano plot of differential protein abundancy.")
+
+MAPlot <- qPLEXanalyzer::maPlot(diffexpCtrlIgG, significanceLevel = 0.00, minLogFoldChangeForLabelling = 1000,
+                 title=names(contrasts), ylab="log2(Fold Change)")
+
+volPlot <- diffexpCtrlIgG %>% 
+    mutate(phredAdjPval=-log10(adj.P.Val)) %>% 
+    mutate(Signif=ifelse(adj.P.Val<=0.01, "<=0.01", ifelse(adj.P.Val<=0.05, "<=0.05", ">0.05"))) %>% 
+    ggplot() +
+        geom_point(aes(x=logFC, y=phredAdjPval, fill=Signif), colour="black", shape=21) +
+        scale_fill_manual(values=c("red", "orange", "black"), name="Adjusted p-value", limits=c("<=0.01", "<=0.05", ">0.05")) +
+        theme_minimal() +
+        labs(x="log2(Fold Change)", y="-log10(Adjusted p-value)") +
+    theme(legend.position = "bottom")
+
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow = 1, ncol = 2)))
+ define_region <- function(row, col){
+   viewport(layout.pos.row = row, layout.pos.col = col)
+}
+print(MAPlot, vp = define_region(row = 1, col = 1)) 
+print(volPlot, vp = define_region(row = 1, col = 2)) 
+
+```
+
+
+### ER - IgG
+
+```{r contrastERIgG, include=F}
+# differential analysis
+contrasts <- c(ER_v_IgG = "ER - IgG")
+contrastName <- gsub(" - ", "_v_", contrasts)
+diffstats <- computeDiffStats(data=pnormTrimMSnset, contrasts=contrasts, 
+                              applyLog2Transform = TRUE)
+diffexpERIgG <- getContrastResults(diffstats=diffstats, contrast=contrasts, 
+                              controlGroup = NULL, ann = annot) %T>% 
+    write.csv(paste0(outputDir, "/DifferentialAbundance.", contrastName, ".SevenSamples.csv"), row.names=F)
+```
+
+`r reflink("ERIgGDATab")` shows differential abundancy results for the contrasts `r contrastName`.
+`r reflink("ERIgGQCFig")` shows an MA plot and a volcano plot of the differental analysis results.
+
+```{r daResTabERIgG, echo=F, results="asis"}
+
+deFCap <- refcaption("ERIgGDATab", "Differential abundancy results using all 8 samples.", refType = "Table")
+deFColnames <- c("Protein", "Gene", "Description", "Gene Symbol", "log(Fold Change)", "Adjusted p-value")
+deFOptions <- list(columnDefs = list(list(className = 'dt-center', targets="_all")), dom='ltip')
+diffexpERIgG %>% 
+    dplyr::select(Protein, Gene, Description, GeneSymbol, logFC, adj.P.Val) %>% 
+    datatable(colnames=deFColnames, options=deFOptions, rownames = FALSE, caption=deFCap)
+
+```
+
+```{r resPlotERIgG, echo=F, fig.width=10, fig.cap=ERIgGDACap, results="asis"}
+ERIgGDACap <- refcaption("ERIgGDAFig", "MA plot and volcano plot of differential protein abundancy.")
+
+MAPlot <- qPLEXanalyzer::maPlot(diffexpERIgG, significanceLevel = 0.00, minLogFoldChangeForLabelling = 1000,
+                 title=names(contrasts), ylab="log2(Fold Change)")
+
+volPlot <- diffexpERIgG %>% 
+    mutate(phredAdjPval=-log10(adj.P.Val)) %>% 
+    mutate(Signif=ifelse(adj.P.Val<=0.01, "<=0.01", ifelse(adj.P.Val<=0.05, "<=0.05", ">0.05"))) %>% 
+    ggplot() +
+        geom_point(aes(x=logFC, y=phredAdjPval, fill=Signif), colour="black", shape=21) +
+        scale_fill_manual(values=c("red", "orange", "black"), name="Adjusted p-value", limits=c("<=0.01", "<=0.05", ">0.05")) +
+        theme_minimal() +
+        labs(x="log2(Fold Change)", y="-log10(Adjusted p-value)") +
+    theme(legend.position = "bottom")
+
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow = 1, ncol = 2)))
+ define_region <- function(row, col){
+   viewport(layout.pos.row = row, layout.pos.col = col)
+}
+print(MAPlot, vp = define_region(row = 1, col = 1)) 
+print(volPlot, vp = define_region(row = 1, col = 2)) 
+
+```
